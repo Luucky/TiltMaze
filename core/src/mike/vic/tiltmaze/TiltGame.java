@@ -2,104 +2,99 @@ package mike.vic.tiltmaze;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Circle;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.Body;
-import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
-import com.badlogic.gdx.physics.box2d.Box2D;
-import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
-import com.badlogic.gdx.physics.box2d.CircleShape;
-import com.badlogic.gdx.physics.box2d.Fixture;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.VertexAttributes;
+import com.badlogic.gdx.graphics.g3d.Environment;
+import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
+import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.utils.Array;
 
 public class TiltGame extends ApplicationAdapter {
-	SpriteBatch batch;
-	OrthographicCamera camera;
-	BitmapFont font;
-	FreeTypeFontGenerator generator;
-	FreeTypeFontGenerator.FreeTypeFontParameter parameter;
-	public static final String FONT_CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789][_!$%#@|\\/?-+=()*&.;,{}\"´`'<>";
-	CharSequence str = "";
-	World world;
-//	Box2DDebugRenderer debugRenderer = new Box2DDebugRenderer();
+    public Environment environment;
+    public PerspectiveCamera cam;
+    public CameraInputController camController;
+    public ModelBatch modelBatch;
+    public Model ball, plane;
+    public Array<ModelInstance> instances = new Array<ModelInstance>();
 
-	FixtureDef fdef;
-	Fixture fixture;
-	BodyDef bdeff;
-	Body body;
+    @Override
+    public void create() {
+        environment = new Environment();
+        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
+        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.2f, -.5f, -0f, -0f));
 
-	CircleShape ball;
+        modelBatch = new ModelBatch();
 
-	@Override
-	public void create () {
-		Box2D.init();
-		batch = new SpriteBatch();
-		generator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
-		parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-		parameter.size = 22;
-		parameter.characters = FONT_CHARACTERS;
-		font = generator.generateFont(parameter);
-		generator.dispose();
+        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        cam.position.set(0f, 0f,102);
+        cam.lookAt(0,0,0);
+        cam.near = 1f;
+        cam.far = 300f;
+        cam.update();
 
-		world = new World(new Vector2(0, -10), true);
+        ModelBuilder modelBuilder = new ModelBuilder();
+        ball = modelBuilder.createSphere(10, 10, 10, 100, 100,
+                new Material(ColorAttribute.createDiffuse(Color.GREEN)),
+                VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+        //plane = modelBuilder.createRect(0, 0, 0, 10, 0, 0, 10, 10, 10, 0, 10, 10, 0, 0, 1,
+        //        new Material(ColorAttribute.createDiffuse(Color.RED)),
+        //        VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 
-		bdeff  = new BodyDef();
-		bdeff.type = BodyType.DynamicBody;
-		bdeff.position.set(50, 400);
-		body = world.createBody(bdeff);
+        plane = modelBuilder.createRect(-50,-50, 0, 50, -50, 0,  50, 50, 0, -50, 50, 0, 0, 0, 1,
+                GL20.GL_TRIANGLES,
+                new Material(
+                    new ColorAttribute(
+                        ColorAttribute.createDiffuse(Color.RED)),
+                    new BlendingAttribute(
+                        GL20.GL_SRC_ALPHA,
+                        GL20.GL_ONE_MINUS_SRC_ALPHA)),
+                VertexAttributes.Usage.Position | VertexAttributes.Usage.TextureCoordinates);
+        ModelInstance instance = new ModelInstance(ball);
+        instance.transform.setToTranslation(0, 0, 10);
+        instances.add(instance);
+        instances.add(new ModelInstance(plane));
 
-		ball = new CircleShape();
-		ball.setRadius(6f);
-		System.out.println(ball.getType());
+        camController = new CameraInputController(cam);
+        Gdx.input.setInputProcessor(camController);
+    }
 
-		fdef = new FixtureDef();
-		fdef.shape = ball;
-		fdef.density = 0.5f;
-		fdef.friction = 0.4f;
-		fdef.restitution = 0.6f;
+    @Override
+    public void render() {
+        camController.update();
 
-		fixture = body.createFixture(fdef);
+        Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-		camera = new OrthographicCamera();
-		camera.setToOrtho(false, 800, 480);
+        modelBatch.begin(cam);
+        modelBatch.render(instances, environment);
+        modelBatch.end();
+    }
 
-		shapeRenderer = new ShapeRenderer();
+    @Override
+    public void dispose() {
+        modelBatch.dispose();
+        ball.dispose();
+    }
 
-		ball.dispose();
-	}
+    @Override
+    public void resize(int width, int height) {
+    }
 
-	ShapeRenderer shapeRenderer;
+    @Override
+    public void pause() {
+    }
 
-	@Override
-	public void render() {
-		Gdx.gl.glClearColor(1, 1, 1, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		camera.update();
-		batch.setProjectionMatrix(camera.combined);
-
-
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-		shapeRenderer.setColor(0, 1, 0, 1);
-		shapeRenderer.circle(body.getPosition().x, body.getPosition().y,  6f);
-		shapeRenderer.end();
-
-		batch.begin();
-		font.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-		//font.draw(batch, "some string", 25, 160);
-		batch.end();
-		//debugRenderer.render(world, camera.combined);
-		world.step(1 / 60f, 6, 2);
-		//if (Gdx.input.getAccelerometerX())
-
-	}
+    @Override
+    public void resume() {
+    }
 }
 
