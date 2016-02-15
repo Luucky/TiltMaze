@@ -1,11 +1,15 @@
 package mike.vic.tiltmaze;
-
-import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -15,193 +19,327 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
-import com.badlogic.gdx.physics.bullet.collision.CollisionObjectWrapper;
+import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.ContactListener;
 import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
-import com.badlogic.gdx.physics.bullet.collision.btCollisionAlgorithm;
+import com.badlogic.gdx.physics.bullet.collision.btBroadphaseInterface;
+import com.badlogic.gdx.physics.bullet.collision.btCapsuleShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionConfiguration;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
-import com.badlogic.gdx.physics.bullet.collision.btCollisionObjectWrapper;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
+import com.badlogic.gdx.physics.bullet.collision.btConeShape;
+import com.badlogic.gdx.physics.bullet.collision.btCylinderShape;
+import com.badlogic.gdx.physics.bullet.collision.btDbvtBroadphase;
 import com.badlogic.gdx.physics.bullet.collision.btDefaultCollisionConfiguration;
 import com.badlogic.gdx.physics.bullet.collision.btDispatcher;
-import com.badlogic.gdx.physics.bullet.collision.btDispatcherInfo;
-import com.badlogic.gdx.physics.bullet.collision.btManifoldPoint;
-import com.badlogic.gdx.physics.bullet.collision.btManifoldResult;
 import com.badlogic.gdx.physics.bullet.collision.btSphereShape;
+import com.badlogic.gdx.physics.bullet.dynamics.btConstraintSolver;
+import com.badlogic.gdx.physics.bullet.dynamics.btDiscreteDynamicsWorld;
+import com.badlogic.gdx.physics.bullet.dynamics.btDynamicsWorld;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
+import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
+import com.badlogic.gdx.physics.bullet.linearmath.btMotionState;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ArrayMap;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
-public class TiltGame extends ApplicationAdapter {
 
-    public PerspectiveCamera cam;
-    public CameraInputController camController;
-    public ModelBatch modelBatch;
-
-    public Model model;
-
-    btCollisionConfiguration collisionConfig;
-    btDispatcher dispatcher;
-
-    public Environment environment;
-    public Array<Entity> instances = new Array<Entity>();
-    ArrayMap<String, Entity.Creator> creators;
+public class TiltGame extends InputAdapter implements ApplicationListener {
+    final static short GROUND_FLAG = 1 << 8;
+    final static short OBJECT_FLAG = 1 << 9;
+    final static short ALL_FLAG = -1;
 
     class MyContactListener extends ContactListener {
         @Override
-        public boolean onContactAdded (int userValue0, int partId0, int index0, int userValue1, int partId1, int index1) {
-            instances.get(userValue0).moving = false;
-            instances.get(userValue1).moving = false;
+        public boolean onContactAdded (int userValue0, int partId0, int index0, boolean match0, int userValue1, int partId1, int index1, boolean match1) {
+            if (match0) ((ColorAttribute)instances.get(userValue0).materials.get(0).get(ColorAttribute.Diffuse)).color.set(Color.WHITE);
+            if (match1) ((ColorAttribute)instances.get(userValue1).materials.get(0).get(ColorAttribute.Diffuse)).color.set(Color.WHITE);
             return true;
         }
     }
+
+    static class MotionState extends btMotionState {
+        Matrix4 transform;
+
+        @Override
+        public void getWorldTransform (Matrix4 worldTrans) {
+            worldTrans.set(transform);
+        }
+
+        @Override
+        public void setWorldTransform (Matrix4 worldTrans) {
+            transform.set(worldTrans);
+        }
+    }
+
     static class Entity extends ModelInstance implements Disposable {
+        public final btRigidBody body;
+        public final MotionState motionState;
+
+        public Entity (Model model, String node, btRigidBody.btRigidBodyConstructionInfo constructionInfo) {
+            super(model, node);
+            motionState = new MotionState();
+            motionState.transform = transform;
+            body = new btRigidBody(constructionInfo);
+            body.setMotionState(motionState);
+            //body.setFriction(1);
+            //body.setRestitution(1);
+        }
+
+        @Override
+        public void dispose () {
+            body.dispose();
+            motionState.dispose();
+        }
+
         static class Creator implements Disposable {
             public final Model model;
             public final String node;
             public final btCollisionShape shape;
-            public Creator(Model m, String n, btCollisionShape s) {
-                model = m;
-                node = n;
-                shape = s;
+            public final btRigidBody.btRigidBodyConstructionInfo constructionInfo;
+            private static Vector3 localInertia = new Vector3();
+
+            public Creator (Model model, String node, btCollisionShape shape, float mass) {
+                this.model = model;
+                this.node = node;
+                this.shape = shape;
+                if (mass > 0f)
+                    shape.calculateLocalInertia(mass, localInertia);
+                else
+                    localInertia.set(0, 0, 0);
+                this.constructionInfo = new btRigidBody.btRigidBodyConstructionInfo(mass, null, shape, localInertia);
             }
 
-            public Entity create() {
-                return new Entity(model, node, shape);
+            public Entity create () {
+                return new Entity(model, node, constructionInfo);
             }
 
             @Override
             public void dispose () {
                 shape.dispose();
+                constructionInfo.dispose();
             }
-        }
-        public final btCollisionObject body;
-        public boolean moving;
-        public Entity(Model model, String node, btCollisionShape shape) {
-            super(model, node);
-            body = new btCollisionObject();
-            body.setCollisionShape(shape);
-        }
-
-        @Override
-        public void dispose() {
-            body.dispose();
         }
     }
 
+    OrthographicCamera cam;
+    ExtendViewport viewport;
+    CameraInputController camController;
+    ModelBatch modelBatch;
+    Environment environment;
+    Model model;
+    Array<Entity> instances;
+    ArrayMap<String, Entity.Creator> constructors;
+    float spawnTimer;
+
+    btCollisionConfiguration collisionConfig;
+    btDispatcher dispatcher;
+    MyContactListener contactListener;
+    btBroadphaseInterface broadphase;
+    btDynamicsWorld dynamicsWorld;
+    btConstraintSolver constraintSolver;
+
+    protected Stage stage;
+    protected Label label;
+    protected BitmapFont font;
+    protected StringBuilder stringBuilder;
+
+    float xRot = 0;
+
     @Override
-    public void create() {
+    public void create () {
         Bullet.init();
 
-        environment = new Environment();
-
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
-        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.2f, -.5f, -0f, -0f));
+        stage = new Stage();
+        font = new BitmapFont();
+        label = new Label(" ", new Label.LabelStyle(font, Color.WHITE));
+        stage.addActor(label);
+        stringBuilder = new StringBuilder();
 
         modelBatch = new ModelBatch();
+        environment = new Environment();
+        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
+        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
 
-        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        cam.position.set(0f, 0f, 102);
-        cam.lookAt(0,0,0);
+
+        cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        cam.position.set(0, 0, 10f);
+        cam.setToOrtho(false, 680, 400);
+        cam.lookAt(0, 0, 0);
         cam.near = 1f;
-        cam.far = 300f;
+        cam.far = 800f;
         cam.update();
+        viewport = new ExtendViewport(800, 480, cam);
 
-        ModelBuilder modelBuilder = new ModelBuilder();
-        modelBuilder.begin();
-        modelBuilder.node().id = "ball";
-        modelBuilder.part("sphere", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.GREEN))).sphere(10, 10, 10, 100, 100);
-        modelBuilder.node().id = "ground";
-        modelBuilder.part("box", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.RED))).box(50, 50, 1);
-        model = modelBuilder.end();
-        creators = new ArrayMap<String, Entity.Creator>(String.class, Entity.Creator.class);
-        creators.put("ball", new Entity.Creator(model, "ball", new btSphereShape(5)));
-        creators.put("ground", new Entity.Creator(model, "ground", new btBoxShape(new Vector3(25, 25, 0.5f))));
-        instance.transform.setToTranslation(0, 0, 10);
-        instances.add(instance);
-        instances.add(new ModelInstance(model, "ground", ));
+        camController = new CameraInputController(cam);
+        Gdx.input.setInputProcessor(new InputMultiplexer(this, camController));
+
+        ModelBuilder mb = new ModelBuilder();
+        mb.begin();
+        mb.node().id = "ground";
+        mb.part("ground", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.RED)))
+                .box(100f, 100f, 4f);
+        mb.node().id = "sphere";
+        mb.part("sphere", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.GREEN)))
+                .sphere(10f, 10f, 10f, 100, 100);
+        mb.node().id = "box";
+        mb.part("box", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.BLUE)))
+                .box(1f, 1f, 1f);
+        mb.node().id = "cone";
+        mb.part("cone", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.YELLOW)))
+                .cone(1f, 2f, 1f, 10);
+        mb.node().id = "capsule";
+        mb.part("capsule", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.CYAN)))
+                .capsule(0.5f, 2f, 10);
+        mb.node().id = "cylinder";
+        mb.part("cylinder", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.MAGENTA)))
+                .cylinder(1f, 2f, 1f, 10);
+        model = mb.end();
+
+        constructors = new ArrayMap<String, Entity.Creator>(String.class, Entity.Creator.class);
+        constructors.put("ground", new Entity.Creator(model, "ground", new btBoxShape(new Vector3(50f, 50f, 2f)), 0f));
+        constructors.put("sphere", new Entity.Creator(model, "sphere", new btSphereShape(5f), 1f));
+        constructors.put("box", new Entity.Creator(model, "box", new btBoxShape(new Vector3(0.5f, 0.5f, 0.5f)), 1f));
+        constructors.put("cone", new Entity.Creator(model, "cone", new btConeShape(0.5f, 2f), 1f));
+        constructors.put("capsule", new Entity.Creator(model, "capsule", new btCapsuleShape(.5f, 1f), 1f));
+        constructors.put("cylinder", new Entity.Creator(model, "cylinder", new btCylinderShape(new Vector3(.5f, 1f, .5f)), 1f));
 
         collisionConfig = new btDefaultCollisionConfiguration();
         dispatcher = new btCollisionDispatcher(collisionConfig);
+        broadphase = new btDbvtBroadphase();
+        constraintSolver = new btSequentialImpulseConstraintSolver();
+        dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, constraintSolver, collisionConfig);
+        dynamicsWorld.setGravity(new Vector3(0, 0, -9.8f));
+        contactListener = new MyContactListener();
 
-        camController = new CameraInputController(cam);
-        Gdx.input.setInputProcessor(camController);
-        System.out.println(instances.get(0).toString());
+        instances = new Array<Entity>();
+        Entity object = constructors.get("ground").create();
+        object.body.setCollisionFlags(object.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_KINEMATIC_OBJECT);
+        object.transform.setFromEulerAngles(0, 0, 0);
+        object.body.proceedToTransform(object.transform);
+        instances.add(object);
+        dynamicsWorld.addRigidBody(object.body);
+        object.body.setContactCallbackFlag(GROUND_FLAG);
+        object.body.setContactCallbackFilter(0);
+
+        object = constructors.get("sphere").create();
+        object.transform.trn(0, 0, 5f);
+        object.body.proceedToTransform(object.transform);
+        object.body.setUserValue(instances.size);
+        object.body.setCollisionFlags(object.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_CUSTOM_MATERIAL_CALLBACK);
+        instances.add(object);
+        dynamicsWorld.addRigidBody(object.body);
+        object.body.setContactCallbackFlag(OBJECT_FLAG);
+        object.body.setContactCallbackFilter(GROUND_FLAG);
+        object.body.setActivationState(Collision.DISABLE_DEACTIVATION);
     }
 
-    boolean collision = false;
+    @Override
+    public boolean keyDown(int keyCode) {
+        switch (keyCode) {
+            case Input.Keys.LEFT:
+
+                break;
+            case Input.Keys.RIGHT:
+                System.out.println(xRot + " x");
+                xRot += 1;
+                instances.get(0).transform.setFromEulerAngles(xRot, 0, 0);
+                instances.get(0).body.proceedToTransform(instances.get(0).transform);
+                break;
+        }
+        return true; // return true to indicate the event was handled
+    }
 
     @Override
-    public void render() {
+    public boolean touchUp(int x, int y, int pointer, int button) {
+        System.out.println(xRot + " x");
+        xRot -= 1;
+        instances.get(0).transform.setFromEulerAngles(xRot, 0, 0);
+        return true; // return true to indicate the event was handled
+    }
+
+    float accelX, accelY;
+
+    public void accelerometer() {
+        accelX = Gdx.input.getAccelerometerX();
+        accelY = Gdx.input.getAccelerometerY();
+    }
+
+    float angle, speed = 90f;
+
+    @Override
+    public void render () {
+        final float delta = Math.min(1f / 30f, Gdx.graphics.getDeltaTime());
+
+        //angle = (angle + delta * speed) % 360f;
+        //instances.get(0).transform.setTranslation(0, MathUtils.sinDeg(angle) * 2.5f, 0f);
+        instances.get(0).transform.idt().rotate(1, 0, 0, xRot).translate(0, 0, 0);
+        instances.get(0).body.setActivationState(Collision.ACTIVE_TAG);
+
+        dynamicsWorld.stepSimulation(delta, 5, 1f / 60f);
+
         camController.update();
 
-        Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        Gdx.gl.glClearColor(0.3f, 0.3f, 0.3f, 1.f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
         modelBatch.begin(cam);
         modelBatch.render(instances, environment);
         modelBatch.end();
-        final float delta = Math.min(1f/30f, Gdx.graphics.getDeltaTime());
 
-        if (!collision) {
-            instances.get(0).transform.translate(0, 0, -delta);
-            ballObject.setWorldTransform(instances.get(0).transform);
-            collision = checkCollision(ballObject, groundObject);
-        }
+        stringBuilder.setLength(0);
 
-    }
-
-    boolean checkCollision(btCollisionObject obj0, btCollisionObject obj1) {
-        CollisionObjectWrapper co0 = new CollisionObjectWrapper(obj0);
-        CollisionObjectWrapper co1 = new CollisionObjectWrapper(obj1);
-
-        btCollisionAlgorithm algorithm = dispatcher.findAlgorithm(co0.wrapper, co1.wrapper);
-
-        btDispatcherInfo info = new btDispatcherInfo();
-        btManifoldResult result = new btManifoldResult(co0.wrapper, co1.wrapper);
-
-        algorithm.processCollision(co0.wrapper, co1.wrapper, info, result);
-
-        boolean r = result.getPersistentManifold().getNumContacts() > 0;
-
-        dispatcher.freeCollisionAlgorithm(algorithm.getCPointer());
-        result.dispose();
-        info.dispose();
-        co1.dispose();
-        co0.dispose();
-
-        return r;
+        stringBuilder.append(" AceX: ").append(Gdx.input.getAccelerometerX());
+        stringBuilder.append(" AceY: ").append(Gdx.input.getAccelerometerY());
+        label.setFontScale(3);
+        label.setText(stringBuilder);
+        stage.draw();
     }
 
     @Override
-    public void dispose() {
-        groundObject.dispose();
-        groundShape.dispose();
+    public void dispose () {
+        for (Entity obj : instances)
+            obj.dispose();
+        instances.clear();
 
-        ballObject.dispose();
-        ballShape.dispose();
+        for (Entity.Creator ctor : constructors.values())
+            ctor.dispose();
+        constructors.clear();
 
+        dynamicsWorld.dispose();
+        constraintSolver.dispose();
+        broadphase.dispose();
         dispatcher.dispose();
         collisionConfig.dispose();
+
+        contactListener.dispose();
 
         modelBatch.dispose();
         model.dispose();
     }
 
+
+
     @Override
-    public void resize(int width, int height) {
+    public void pause () {
     }
 
     @Override
-    public void pause() {
+    public void resume () {
     }
 
     @Override
-    public void resume() {
+    public void resize (int width, int height) {
     }
 }
 
+//boolean available = Gdx.input.isPeripheralAvailable(Peripheral.Accelerometer); checking accelerometer availability
