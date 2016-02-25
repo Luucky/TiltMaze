@@ -1,4 +1,5 @@
 package mike.vic.tiltmaze;
+
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -6,7 +7,6 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -22,6 +22,7 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Quaternion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.physics.bullet.collision.Collision;
@@ -51,7 +52,6 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ArrayMap;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-
 
 public class TiltGame extends InputAdapter implements ApplicationListener {
     final static short GROUND_FLAG = 1 << 8;
@@ -89,10 +89,10 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
             super(model, node);
             motionState = new MotionState();
             motionState.transform = transform;
+            //constructionInfo.setRestitution(0.000001f);
             body = new btRigidBody(constructionInfo);
+           // body.setGravity(new Vector3(0, -9.8f, 0));
             body.setMotionState(motionState);
-            //body.setFriction(1);
-            //body.setRestitution(1);
         }
 
         @Override
@@ -131,7 +131,7 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
         }
     }
 
-    OrthographicCamera cam;
+    PerspectiveCamera cam;
     ExtendViewport viewport;
     CameraInputController camController;
     ModelBatch modelBatch;
@@ -139,7 +139,7 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
     Model model;
     Array<Entity> instances;
     ArrayMap<String, Entity.Creator> constructors;
-    float spawnTimer;
+    Accelerometer accelerometer;
 
     btCollisionConfiguration collisionConfig;
     btDispatcher dispatcher;
@@ -154,11 +154,13 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
     protected StringBuilder stringBuilder;
 
     float xRot = 0;
+    float[] camPos;
 
     @Override
     public void create () {
         Bullet.init();
 
+        accelerometer = new Accelerometer(0.2f);
         stage = new Stage();
         font = new BitmapFont();
         label = new Label(" ", new Label.LabelStyle(font, Color.WHITE));
@@ -170,24 +172,11 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
 
-
-        cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        cam.position.set(0, 0, 10f);
-        cam.setToOrtho(false, 680, 400);
-        cam.lookAt(0, 0, 0);
-        cam.near = 1f;
-        cam.far = 800f;
-        cam.update();
-        viewport = new ExtendViewport(800, 480, cam);
-
-        camController = new CameraInputController(cam);
-        Gdx.input.setInputProcessor(new InputMultiplexer(this, camController));
-
         ModelBuilder mb = new ModelBuilder();
         mb.begin();
         mb.node().id = "ground";
         mb.part("ground", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.RED)))
-                .box(100f, 100f, 4f);
+                .box(150f, 4f, 200f);
         mb.node().id = "sphere";
         mb.part("sphere", GL20.GL_TRIANGLES, Usage.Position | Usage.Normal, new Material(ColorAttribute.createDiffuse(Color.GREEN)))
                 .sphere(10f, 10f, 10f, 100, 100);
@@ -206,8 +195,9 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
         model = mb.end();
 
         constructors = new ArrayMap<String, Entity.Creator>(String.class, Entity.Creator.class);
-        constructors.put("ground", new Entity.Creator(model, "ground", new btBoxShape(new Vector3(50f, 50f, 2f)), 0f));
-        constructors.put("sphere", new Entity.Creator(model, "sphere", new btSphereShape(5f), 1f));
+        constructors.put("nothing", new Entity.Creator(model, "", new btBoxShape(new Vector3(75f, 2, 100f)), 0));
+        constructors.put("ground", new Entity.Creator(model, "ground", new btBoxShape(new Vector3(75f, 2f, 100f)), 0));
+        constructors.put("sphere", new Entity.Creator(model, "sphere", new btSphereShape(5f), 0.1f));
         constructors.put("box", new Entity.Creator(model, "box", new btBoxShape(new Vector3(0.5f, 0.5f, 0.5f)), 1f));
         constructors.put("cone", new Entity.Creator(model, "cone", new btConeShape(0.5f, 2f), 1f));
         constructors.put("capsule", new Entity.Creator(model, "capsule", new btCapsuleShape(.5f, 1f), 1f));
@@ -218,12 +208,25 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
         broadphase = new btDbvtBroadphase();
         constraintSolver = new btSequentialImpulseConstraintSolver();
         dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, constraintSolver, collisionConfig);
-        dynamicsWorld.setGravity(new Vector3(0, 0, -9.8f));
+        dynamicsWorld.setGravity(new Vector3(0, -9.8f, 0));
         contactListener = new MyContactListener();
 
         instances = new Array<Entity>();
         Entity object = constructors.get("ground").create();
         object.body.setCollisionFlags(object.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_KINEMATIC_OBJECT);
+        object.body.setHitFraction(0);
+        object.body.setRollingFriction(0.1f);
+        object.transform.setFromEulerAngles(0, 0, 0);
+        object.body.proceedToTransform(object.transform);
+        instances.add(object);
+        dynamicsWorld.addRigidBody(object.body);
+        object.body.setContactCallbackFlag(GROUND_FLAG);
+        object.body.setContactCallbackFilter(0);
+
+        object = constructors.get("nothing").create();
+        object.body.setCollisionFlags(object.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_KINEMATIC_OBJECT);
+        object.body.setHitFraction(0);
+        object.body.setRollingFriction(0.1f);
         object.transform.setFromEulerAngles(0, 0, 0);
         object.body.proceedToTransform(object.transform);
         instances.add(object);
@@ -232,15 +235,28 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
         object.body.setContactCallbackFilter(0);
 
         object = constructors.get("sphere").create();
-        object.transform.trn(0, 0, 5f);
+        object.transform.trn(0, 4.5f, 0);
         object.body.proceedToTransform(object.transform);
         object.body.setUserValue(instances.size);
         object.body.setCollisionFlags(object.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_CUSTOM_MATERIAL_CALLBACK);
+        object.body.setDamping(0.1f, 0.1f);
+        object.body.setLinearVelocity(new Vector3(0, -1, 0));
+        object.body.setFriction(0.1f);
         instances.add(object);
         dynamicsWorld.addRigidBody(object.body);
         object.body.setContactCallbackFlag(OBJECT_FLAG);
         object.body.setContactCallbackFilter(GROUND_FLAG);
         object.body.setActivationState(Collision.DISABLE_DEACTIVATION);
+
+        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        cam.near = 1f;
+        cam.far = 400f;
+        cam.position.set(0, 300, 0);
+        cam.lookAt(0, 0, 0);
+        cam.update();
+       // viewport = new ExtendViewport(800, 480, cam);
+        camController = new CameraInputController(cam);
+        Gdx.input.setInputProcessor(new InputMultiplexer(this));
     }
 
     @Override
@@ -259,35 +275,52 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
         return true; // return true to indicate the event was handled
     }
 
+
+
+    public Vector3 upVector(Matrix4 pos) {
+        float[] tmp = pos.getValues();
+        return new Vector3(tmp[Matrix4.M01], tmp[Matrix4.M11], tmp[Matrix4.M21]);
+    }
+
     @Override
     public boolean touchUp(int x, int y, int pointer, int button) {
-        System.out.println(xRot + " x");
-        xRot -= 1;
-        instances.get(0).transform.setFromEulerAngles(xRot, 0, 0);
+        System.out.println(accelerometer.axisX() + ", " + accelerometer.axisY());
+        System.out.println(upVector(instances.get(0).transform));
+        xRot += 1;
+        cam.rotate(10, 0, 1, 0);
         return true; // return true to indicate the event was handled
     }
+    Quaternion rotation = new Quaternion();
 
-    float accelX, accelY;
 
-    public void accelerometer() {
-        accelX = Gdx.input.getAccelerometerX();
-        accelY = Gdx.input.getAccelerometerY();
+
+    public void sphericalCamera(float radius, float polar, float elevation) {
+        float a = radius * MathUtils.cos(elevation);
+        cam.position.x = radius * MathUtils.sin(elevation);
+        cam.position.y = a * MathUtils.cos(polar);
+        cam.position.z = a * MathUtils.sin(polar);
     }
-
-    float angle, speed = 90f;
 
     @Override
     public void render () {
-        final float delta = Math.min(1f / 30f, Gdx.graphics.getDeltaTime());
+        //sphericalCamera(200f,  ((accelY / 10) * (MathUtils.PI / 2)), (MathUtils.PI / 2) +  ((accelX / 10) * (MathUtils.PI / 2)) );//-((accelY / 10) * (MathUtils.PI / 2))); //(MathUtils.PI / 2) + ((accelX / 10) * (MathUtils.PI / 2))
+        //cam.position.set(upVector(instances.get(0).transform).scl(200f));
+        //cam.direction.set(upVector(instances.get(0).transform).scl(-1f));
+        //cam.direction.
+        // cam.update();
 
-        //angle = (angle + delta * speed) % 360f;
-        //instances.get(0).transform.setTranslation(0, MathUtils.sinDeg(angle) * 2.5f, 0f);
-        instances.get(0).transform.idt().rotate(1, 0, 0, xRot).translate(0, 0, 0);
+        accelerometer.update();
+
+        final float delta = Math.min(1f / 60f, Gdx.graphics.getDeltaTime());
+
+        rotation.setEulerAngles(0, ((((accelerometer.axisY() * 10) / 10f) / 10) * 90), ((((accelerometer.axisX() * 10) / 10f) / 10) * 90));
+
+        instances.get(0).transform.idt().rotate(rotation).translate(0, 0, 0);
         instances.get(0).body.setActivationState(Collision.ACTIVE_TAG);
 
-        dynamicsWorld.stepSimulation(delta, 5, 1f / 60f);
+        dynamicsWorld.stepSimulation(delta, 5, 1f / 120f);
 
-        camController.update();
+        //camController.update();
 
         Gdx.gl.glClearColor(0.3f, 0.3f, 0.3f, 1.f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
