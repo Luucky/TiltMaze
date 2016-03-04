@@ -3,6 +3,7 @@ package mike.vic.tiltmaze;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 
 /**
  * Created by Mike on 2016-02-24.
@@ -13,29 +14,34 @@ import com.badlogic.gdx.math.Vector2;
 
  */
 public class Accelerometer {
-    private Vector2 accelerometerData;
-
-    private float alpha;
-    private Vector2 oldData;
+    static private Vector2 accelerometerData;
+    static private float alpha;
+    static private Vector2 oldData;
 
     public Accelerometer(float a) {
         alpha = a;
+        accelerometerData = new Vector2();
+        getReading();
     }
 
-    private Vector2 getReading(){
-        return new Vector2(MathUtils.clamp(Gdx.input.getAccelerometerX(), -3, 3), MathUtils.clamp(Gdx.input.getAccelerometerY(), -3, 3));
+    private void getReading(){
+        accelerometerData.set(MathUtils.clamp(Gdx.input.getAccelerometerX(), -3, 3), MathUtils.clamp(Gdx.input.getAccelerometerY(), -3, 3));
     }
 
-    public float axisX() {
+    static public float axisX() {
         return accelerometerData.x;
     }
 
-    public float axisY() {
+    static public float axisY() {
         return accelerometerData.y;
     }
 
-    public synchronized void update() {
-        accelerometerData = getReading();
+    static public Vector3 calculateGravity() {
+        return new Vector3(axisX(), 0, axisY());
+    }
+
+    public synchronized void smoothing() {
+        getReading();
         if (oldData == null) {
             oldData = accelerometerData;
             return;
