@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
@@ -18,18 +19,17 @@ class Marble extends Entity {
     private static final String node = "marble";
 
     private Vector3 gravity;
-    public Model model;
-    public btCollisionShape collisionShape;
 
     public Marble(float diameter, float mass) {
-        super(Universe.builder.createSphere(diameter, diameter, diameter, 100, 100, GL20.GL_TRIANGLES, new Material(ColorAttribute.createDiffuse(Color.GREEN)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal)
+        super(Universe.builder.createSphere(diameter, diameter, diameter, 100, 100, GL20.GL_TRIANGLES, new Material(ColorAttribute.createDiffuse(Color.BLUE)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal)
                 , new btSphereShape(diameter / 2), mass);
         body.setCollisionFlags(body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_CUSTOM_MATERIAL_CALLBACK);
         transform.trn(0, 4.5f, 0);
         body.proceedToTransform(transform);
-        body.setUserValue(2);
+        body.setCcdSweptSphereRadius(diameter / 5);
+        body.setFriction((float) Math.sqrt(0.4));
+        body.setUserValue(99);
         gravity = new Vector3();
-        body.setGravity(gravity);
         body.setContactCallbackFlag(OBJECT_FLAG);
         body.setContactCallbackFilter(GROUND_FLAG);
     }
@@ -48,7 +48,7 @@ class Marble extends Entity {
 //        }
 
     public void updateGravity() {
-        gravity.set(-Accelerometer.axisX() / 3 * 15f, -9.8f, Accelerometer.axisY() / 3 * 15f);
+        gravity.set(-Accelerometer.axisX() / 3 * 9.8f, -9.8f, Accelerometer.axisY() / 3 * 9.8f);
         body.setGravity(gravity);
     }
 }

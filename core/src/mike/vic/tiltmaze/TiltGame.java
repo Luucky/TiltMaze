@@ -1,19 +1,26 @@
 package mike.vic.tiltmaze;
 
 import com.badlogic.gdx.ApplicationListener;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class TiltGame extends InputAdapter implements ApplicationListener {
 
-    ExtendViewport viewport;
+    private Viewport screen;
+    private PerspectiveCamera cam;
+    private CameraInputController camController;
 
     private Accelerometer accelerometer;
     private Universe universe;
@@ -23,24 +30,32 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
     protected BitmapFont font;
     protected StringBuilder stringBuilder;
 
-    float xRot = 0;
-    float[] camPos;
     Vector3 gravity;
     @Override
     public void create () {
         Bullet.init();
 
+        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        cam.near = 1f;
+        cam.far = 1000f;
+        cam.position.set(0, 17, 0);
+        cam.lookAt(0, 0, 0);
+        cam.update();
+        camController = new CameraInputController(cam);
+        Gdx.input.setInputProcessor(new InputMultiplexer(camController));
+
+        screen = new ScreenViewport();
+        stage = new Stage(screen);
+
         accelerometer = new Accelerometer(0.1f);
 
         gravity = new Vector3();
-        universe = new Universe();
+        universe = new Universe(cam);
 
-        stage = new Stage();
         font = new BitmapFont();
         label = new Label(" ", new Label.LabelStyle(font, Color.WHITE));
         stage.addActor(label);
         stringBuilder = new StringBuilder();
-
 
     }
 
@@ -52,7 +67,6 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
     @Override
     public boolean touchUp(int x, int y, int pointer, int button) {
 
-        xRot += 1;
 
         return true; // return true to indicate the event was handled
     }
@@ -87,6 +101,7 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
         accelerometer.smoothing();
         universe.render();
 
+        camController.update();
 
         stringBuilder.setLength(0);
         gravity.set(Accelerometer.axisX(), 0, Accelerometer.axisY());
