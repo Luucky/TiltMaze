@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 import com.badlogic.gdx.physics.bullet.collision.btSphereShape;
@@ -26,7 +27,7 @@ class Marble extends Entity {
         body.setCollisionFlags(body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_CUSTOM_MATERIAL_CALLBACK);
         transform.trn(0, 4.5f, 0);
         body.proceedToTransform(transform);
-        body.setCcdSweptSphereRadius(diameter / 5);
+        body.setActivationState(Collision.DISABLE_DEACTIVATION);
         body.setFriction((float) Math.sqrt(0.4));
         body.setUserValue(99);
         gravity = new Vector3();
