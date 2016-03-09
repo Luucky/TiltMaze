@@ -113,6 +113,9 @@ public class Maze {
         entity.body.proceedToTransform(entity.transform);
         entity.body.setActivationState(Collision.DISABLE_DEACTIVATION);
         entity.body.setFriction((float) Math.sqrt(0.4));
+        entity.body.setUserValue(77);
+        entity.body.setContactCallbackFlag(Entity.WALL_FLAG);
+        entity.body.setContactCallbackFilter(Entity.OBJECT_FLAG);
         return entity;
     }
 
@@ -154,8 +157,9 @@ public class Maze {
         //entity.transform.trn(2, 0, 2);
         entity.body.setActivationState(Collision.DISABLE_DEACTIVATION);
         entity.body.setFriction((float) Math.sqrt(0.4));
+        entity.body.setUserValue(88);
         entity.body.setContactCallbackFlag(Entity.GROUND_FLAG);
-        entity.body.setContactCallbackFilter(0);
+        entity.body.setContactCallbackFilter(Entity.OBJECT_FLAG);
         return entity;
     }
 

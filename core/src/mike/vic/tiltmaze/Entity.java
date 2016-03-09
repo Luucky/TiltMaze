@@ -14,6 +14,7 @@ class Entity extends ModelInstance implements Disposable {
     public btRigidBody body;
     public MotionState motionState;
 
+    static public final short WALL_FLAG = 1 << 7;
     static public final short GROUND_FLAG = 1 << 8;
     static public final short OBJECT_FLAG = 1 << 9;
     static public final short ALL_FLAG = -1;

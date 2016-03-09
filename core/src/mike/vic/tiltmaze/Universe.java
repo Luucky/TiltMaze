@@ -57,12 +57,11 @@ public class Universe extends TiltGame {
     class ContactOverseer extends ContactListener {
         @Override
         public boolean onContactAdded(int userValue0, int partId0, int index0, boolean match0, int userValue1, int partId1, int index1, boolean match1) {
-            if (userValue0 == 99) {
+            if (userValue0 == 77 || userValue1 == 77)
+                marble.body.setDamping(0, 0.6f);
+            if (userValue0 == 88 || userValue1 == 88)
                 marble.updateGravity();
-            }
-            if (userValue1 == 99) {
-                marble.updateGravity();
-            }
+
             return true;
         }
     }
@@ -85,7 +84,7 @@ public class Universe extends TiltGame {
 
         builder = new ModelBuilder();
         //  Marble.createModel(100f);
-        maze = new Maze(16f, 1, 26f, 30, 35);
+        maze = new Maze(16f, 1, 26f, 20, 25);
         marble = new Marble(0.3f, 0.1f);
 //        marble.transform.setTranslation(0, 100, 0);
 //        btCollisionShape shape = new btBoxShape(new Vector3(16 / 2, 1, 1 / 2));
