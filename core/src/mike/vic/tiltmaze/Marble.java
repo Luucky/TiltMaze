@@ -7,30 +7,26 @@ import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 import com.badlogic.gdx.physics.bullet.collision.btSphereShape;
 
-/**
- * Created by Mike on 2016-03-03.
- */
 class Marble extends Entity {
-    private static final String node = "marble";
+    private Vector3 position;
 
-    private Vector3 gravity;
-
-    public Marble(float diameter, float mass) {
+    public Marble(float diameter, float mass, float friction, Vector3 startPoint) {
         super(Universe.builder.createSphere(diameter, diameter, diameter, 100, 100, GL20.GL_TRIANGLES, new Material(ColorAttribute.createDiffuse(Color.BLUE)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal)
                 , new btSphereShape(diameter / 2), mass);
         body.setCollisionFlags(body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_CUSTOM_MATERIAL_CALLBACK);
-        transform.trn(0, 4.5f, 0);
+        position = startPoint;
+        transform.trn(position);
         body.proceedToTransform(transform);
         body.setActivationState(Collision.DISABLE_DEACTIVATION);
-        body.setFriction((float) Math.sqrt(0.4));
+        body.setFriction((float) Math.sqrt(friction));
         body.setUserValue(99);
-        gravity = new Vector3();
         body.setContactCallbackFlag(OBJECT_FLAG);
         body.setContactCallbackFilter(GROUND_FLAG);
     }
@@ -48,9 +44,12 @@ class Marble extends Entity {
 //            return collisionShape;
 //        }
 
-    public void updateGravity() {
-        gravity.set(-Accelerometer.axisX() / 3 * 9.8f, -9.8f, Accelerometer.axisY() / 3 * 9.8f);
-        body.setGravity(gravity);
+    public void update() {
+        transform.getTranslation(position);
+    }
+
+    public Vector3 getPosition() {
+        return position;
     }
 }
 //object.body.setDamping(0.1f, 0.1f);

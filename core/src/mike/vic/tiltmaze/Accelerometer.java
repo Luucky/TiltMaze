@@ -5,14 +5,12 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
-/**
- * Created by Mike on 2016-02-24.
- * This class is going to handle accelerometer data and smooth it out with exponential moving average.
+/* This class is going to handle accelerometer data and smooth it out with exponential moving average.
      * alpha = 0 : data becomes 0
-     * alpha = 0->1 : values towards zero give most smoothing, weakers towards 1
-     * alpha = 1 : no smoothing, real dat
+     * alpha = 0->1 : values towards zero give most smoothing, weakens towards 1
+     * alpha = 1 : no smoothing, real data
+*/
 
- */
 public class Accelerometer {
     static private Vector2 accelerometerData;
     static private float alpha;
@@ -25,22 +23,15 @@ public class Accelerometer {
     }
 
     private void getReading(){
-        accelerometerData.set(MathUtils.clamp(Gdx.input.getAccelerometerX(), -3, 3), MathUtils.clamp(Gdx.input.getAccelerometerY(), -3, 3));
+        accelerometerData.set(Gdx.input.getAccelerometerX(), Gdx.input.getAccelerometerY()).clamp(-3, 3);
     }
 
-    static public float axisX() {
-        return accelerometerData.x;
-    }
 
-    static public float axisY() {
-        return accelerometerData.y;
-    }
+    static public float axisX() { return accelerometerData.x; }
 
-    static public Vector3 calculateGravity() {
-        return new Vector3(axisX(), 0, axisY());
-    }
+    static public float axisY() { return accelerometerData.y; }
 
-    public synchronized void smoothing() {
+    public  void smoothing() {
         getReading();
         if (oldData == null) {
             oldData = accelerometerData;

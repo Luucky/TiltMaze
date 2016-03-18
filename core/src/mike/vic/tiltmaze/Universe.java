@@ -13,8 +13,10 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Quaternion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.ContactListener;
@@ -33,12 +35,10 @@ import com.badlogic.gdx.physics.bullet.dynamics.btDynamicsWorld;
 import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
 import com.badlogic.gdx.utils.Array;
 
-/**
- * Created by Mike on 2016-03-03.
- */
-public class Universe extends TiltGame {
+public class Universe {
     static public btDynamicsWorld dynamicsWorld;
     static public ModelBuilder builder;
+
     private Environment environment;
     private ModelBatch modelBatch;
     private btCollisionConfiguration collisionConfig;
@@ -49,8 +49,10 @@ public class Universe extends TiltGame {
 
     private PerspectiveCamera cam;
 
-    private Marble marble;
     private Maze maze;
+    private Marble marble;
+
+    private Vector3 gravity;
 
     Array<Entity> walls;
 
@@ -60,16 +62,18 @@ public class Universe extends TiltGame {
             if (userValue0 == 77 || userValue1 == 77)
                 marble.body.setDamping(0, 0.6f);
             if (userValue0 == 88 || userValue1 == 88)
-                marble.updateGravity();
+                marble.update();
 
             return true;
         }
     }
 
     public Universe(PerspectiveCamera camera) {
+
         cam = camera;
 
         modelBatch = new ModelBatch();
+        builder = new ModelBuilder();
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
@@ -79,13 +83,13 @@ public class Universe extends TiltGame {
         broadphase = new btDbvtBroadphase();
         constraintSolver = new btSequentialImpulseConstraintSolver();
         dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, constraintSolver, collisionConfig);
-        dynamicsWorld.setGravity(new Vector3(0, -9.8f, 0));
+        gravity = new Vector3(0, -9.8f, 0);
+        dynamicsWorld.setGravity(gravity);
         contactListener = new ContactOverseer();
 
-        builder = new ModelBuilder();
-        //  Marble.createModel(100f);
-        maze = new Maze(16f, 1, 26f, 20, 25);
-        marble = new Marble(0.3f, 0.1f);
+
+        maze = new Maze(0.4f, 16f, 1, 26f, 20, 20);
+        marble = new Marble(0.3f, 0.1f, 0.4f, maze.getStartPoint());
 //        marble.transform.setTranslation(0, 100, 0);
 //        btCollisionShape shape = new btBoxShape(new Vector3(16 / 2, 1, 1 / 2));
 //        walls.add(new Entity(Universe.builder.createBox(16, 2, 1, GL20.GL_TRIANGLES, new Material(ColorAttribute.createDiffuse(Color.YELLOW)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal),
@@ -110,16 +114,23 @@ public class Universe extends TiltGame {
 //                walls.peek().body.setCollisionFlags(walls.peek().body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
 //                walls.peek().body.setActivationState(Collision.ACTIVE_TAG);
 //            }
+
     }
 
+    public void update() {
+        gravity.set(-Accelerometer.axisX() / 3 * 9.8f, -9.8f, Accelerometer.axisY() / 3 * 9.8f);
+        dynamicsWorld.setGravity(gravity);
 
-
-    public void render() {
         final float delta = Math.min(1f / 60f, Gdx.graphics.getDeltaTime());
         dynamicsWorld.stepSimulation(delta, 5, 1f / 120f);
 
         Gdx.gl.glClearColor(0.3f, 0.3f, 0.3f, 1.f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+        Timer.progress();
+        if (Timer.getState() && maze.getFinishArea().dst2(marble.getPosition()) < 0.5) {
+            System.out.println(Timer.getNow());
+        }
 
         modelBatch.begin(cam);
         modelBatch.render(marble, environment);

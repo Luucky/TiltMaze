@@ -3,8 +3,10 @@ package mike.vic.tiltmaze;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.graphics.g2d.ParticleEffectPool;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
@@ -12,14 +14,13 @@ import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
 import com.badlogic.gdx.scenes.scene2d.ui.List;
 import com.badlogic.gdx.utils.Array;
 
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
+import java.util.Stack;
 
-/**
- * Created by Mike on 2016-03-03.
- */
 public class Maze {
     private final float WIDTH, HEIGHT, DEPTH, THICKNESS = 0.1f;
 
@@ -27,37 +28,43 @@ public class Maze {
     private final int[][] maze;
 
     private final float cellUnitX, cellUnitZ, offsetX, offsetZ;
+    private Vector3 finishArea;
     private Array<Entity> walls;
+   // private ParticleEffectPool effectPool = new ParticleEffectPool();
 
     public Array<Entity> renderEntities() {
         return walls;
     }
 
-    public Maze(float width, float height, float depth, int mazeLengthX, int mazeLengthZ) {
+    public Vector3 getStartPoint() {
+        return new Vector3(offsetX + cellUnitX / 2, 3, offsetZ + cellUnitZ / 2);
+    }
+
+    public Vector3 getFinishArea() {
+        return finishArea;
+    }
+
+    public Maze(float friction, float width, float height, float depth, int mazeXcells, int mazeZcells) {
         WIDTH = width;
         HEIGHT = height;
         DEPTH = depth;
 
-        maxCellsX = mazeLengthX;
-        maxCellsZ = mazeLengthZ;
+        maxCellsX = mazeXcells;
+        maxCellsZ = mazeZcells;
 
         walls = new Array<Entity>();
         walls.add(buildPlane());
 
-        cellUnitX = WIDTH / maxCellsX; //16 / 15 =
-        cellUnitZ = DEPTH / maxCellsZ; //26 / 15
+        cellUnitX = WIDTH / maxCellsX;
+        cellUnitZ = DEPTH / maxCellsZ;
         offsetX = -WIDTH / 2;
         offsetZ = -DEPTH / 2;
 
-        maze = new int[maxCellsX][maxCellsZ];
+        finishArea = new Vector3(-offsetX - cellUnitX / 2, 0, -offsetZ - cellUnitZ / 2);
 
-        generateMaze(0, 0); // random starting point to do
+        maze = new int[maxCellsX][maxCellsZ];
+        while (maze[maxCellsX - 1][maxCellsZ - 1] == 0) generateMaze(0, 0);
         buildMaze();
-//        walls.add(buildWall(0, 10, 10, true));
-//        walls.add(buildWall(8, 0,  4, false));
-//        walls.add(buildWall(8, 5,  5, false));
-//        walls.add(buildWall(5, 5, 5, true));
-//        walls.add(buildWall(5, 5, 5, false));
 
         display();
     }
@@ -66,8 +73,8 @@ public class Maze {
         int continuousWallX = 0;
         int continuousWallZ = 0;
 
-        walls.add(buildWall(0, 0, maxCellsX, true));
-        walls.add(buildWall(0, maxCellsZ, maxCellsX, true));
+        walls.add(buildWall(0, 0, maxCellsX, true)); // NORTH WALL
+        walls.add(buildWall(0, maxCellsZ, maxCellsX, true)); // SOUTH WALL
         for (int i = 0; i < maxCellsZ; i++) {
             for (int j = 0; j < maxCellsX; j++) {
                 if ((maze[j][i] & 1) == 0) {
@@ -97,19 +104,17 @@ public class Maze {
             if (continuousWallZ != 0) walls.add(buildWall(i, maxCellsZ - continuousWallZ, continuousWallZ, false));
             continuousWallZ = 0;
         }
-        //buildWall(maxCellsX, maxCellsZ,  true);
     }
 
     private Entity buildWall(int cellsX, int cellsZ, int length, boolean horizontal) {
-        float posX = cellsX * cellUnitX, posZ = cellsZ * cellUnitZ;
+        float posX = cellsX * cellUnitX - THICKNESS, posZ = cellsZ * cellUnitZ + THICKNESS;
         float wallLength = (horizontal ? cellUnitX : cellUnitZ) * length;
-        //wallLength += horizontal ? THICKNESS : -THICKNESS ;
 
         Entity entity = new Entity((Universe.builder.createBox(horizontal ? wallLength : THICKNESS, HEIGHT, !horizontal ? wallLength : THICKNESS, GL20.GL_TRIANGLES,
                 new Material(ColorAttribute.createDiffuse(Color.RED)), Usage.Position | Usage.Normal)),
                 new btBoxShape(new Vector3((horizontal ? wallLength : THICKNESS) / 2, HEIGHT / 2, (!horizontal ? wallLength : THICKNESS) / 2)), 0);
         entity.body.setCollisionFlags(entity.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
-        entity.transform.trn((horizontal ? wallLength / 2 : 0) + posX + offsetX + THICKNESS, HEIGHT, (!horizontal ? wallLength / 2 : 0) + posZ + offsetZ - THICKNESS);
+        entity.transform.trn((horizontal ? wallLength / 2 : 0) + posX + offsetX + THICKNESS, 0, (!horizontal ? wallLength / 2 : 0) + posZ + offsetZ - THICKNESS);
         entity.body.proceedToTransform(entity.transform);
         entity.body.setActivationState(Collision.DISABLE_DEACTIVATION);
         entity.body.setFriction((float) Math.sqrt(0.4));
@@ -128,6 +133,7 @@ public class Maze {
 //            System.out.println();
 //        }
 //    }
+
     public void display() {
         for (int i = 0; i < maxCellsZ; i++) {
             // draw the north edge
@@ -154,7 +160,8 @@ public class Maze {
                 new Material(ColorAttribute.createDiffuse(Color.GREEN)), Usage.Position | Usage.Normal)),
                 new btBoxShape(new Vector3(WIDTH / 2, HEIGHT / 2, DEPTH / 2)), 0);
         entity.body.setCollisionFlags(entity.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
-        //entity.transform.trn(2, 0, 2);
+        entity.transform.trn(0, -HEIGHT, 0);
+        entity.body.proceedToTransform(entity.transform);
         entity.body.setActivationState(Collision.DISABLE_DEACTIVATION);
         entity.body.setFriction((float) Math.sqrt(0.4));
         entity.body.setUserValue(88);
@@ -162,7 +169,6 @@ public class Maze {
         entity.body.setContactCallbackFilter(Entity.OBJECT_FLAG);
         return entity;
     }
-
 
     static DIRECTION[] directions = DIRECTION.values();
     static Random rnd = new Random();
@@ -206,12 +212,12 @@ public class Maze {
             W.opposite = E;
         }
 
-        private DIRECTION(int bit, int dx, int dy) {
+        DIRECTION(int bit, int dx, int dy) {
             this.bit = bit;
             this.dx = dx;
             this.dy = dy;
         }
-    };
+    }
 
     public void dispose() {
         for (Entity ent: walls)

@@ -16,7 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-public class TiltGame extends InputAdapter implements ApplicationListener {
+public class TiltGame implements ApplicationListener {
 
     private Viewport screen;
     private PerspectiveCamera cam;
@@ -30,7 +30,6 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
     protected BitmapFont font;
     protected StringBuilder stringBuilder;
 
-    Vector3 gravity;
     @Override
     public void create () {
         Bullet.init();
@@ -49,7 +48,6 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
 
         accelerometer = new Accelerometer(0.1f);
 
-        gravity = new Vector3();
         universe = new Universe(cam);
 
         font = new BitmapFont();
@@ -59,53 +57,14 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
 
     }
 
-    public Vector3 upVector(Matrix4 pos) {
-        float[] tmp = pos.getValues();
-        return new Vector3(tmp[Matrix4.M01], tmp[Matrix4.M11], tmp[Matrix4.M21]);
-    }
-
-    @Override
-    public boolean touchUp(int x, int y, int pointer, int button) {
-
-
-        return true; // return true to indicate the event was handled
-    }
-
-//    public void sphericalCamera(float radius, float polar, float elevation) {
-//        float a = radius * MathUtils.cos(elevation);
-//        cam.position.x = radius * MathUtils.sin(elevation);
-//        cam.position.y = a * MathUtils.cos(polar);
-//        cam.position.z = a * MathUtils.sin(polar);
-//    }
-
-
-
     @Override
     public void render () {
-        //sphericalCamera(200f,  ((accelY / 10) * (MathUtils.PI / 2)), (MathUtils.PI / 2) +  ((accelX / 10) * (MathUtils.PI / 2)) );//-((accelY / 10) * (MathUtils.PI / 2))); //(MathUtils.PI / 2) + ((accelX / 10) * (MathUtils.PI / 2))
-        //cam.position.set(upVector(instances.get(0).transform).scl(200f));
-        //cam.direction.set(upVector(instances.get(0).transform).scl(-1f));
-        //cam.direction.
-        // cam.update();
-
-
-        //rotation.setEulerAngles(0, ((((accelerometer.axisY() * 10) / 10f) / 10) * 90), ((((accelerometer.axisX() * 10) / 10f) / 10) * 90));
-
-        //contactMatrix = new Matrix4(instances.get(1).transform);
-        //contactMatrix.setTranslation(contactMatrix.getTranslation(new Vector3(0, 0, 0).sub(upVector(instances.get(0).transform))));
-        //instances.get(0).transform.idt().rotate(rotation);
-        //nstances.get(0).body.setCenterOfMassTransform(contactMatrix);
-
-        //System.out.println(instances.get(0).body.get);
-        //instances.get(0).body.setActivationState(Collision.DISABLE_DEACTIVATION);
         accelerometer.smoothing();
-        universe.render();
+        universe.update();
 
         camController.update();
 
         stringBuilder.setLength(0);
-        gravity.set(Accelerometer.axisX(), 0, Accelerometer.axisY());
-                stringBuilder.append("").append(gravity);
         label.setFontScale(3);
         label.setText(stringBuilder);
         stage.draw();
@@ -132,3 +91,32 @@ public class TiltGame extends InputAdapter implements ApplicationListener {
 }
 
 //boolean available = Gdx.input.isPeripheralAvailable(Peripheral.Accelerometer); checking accelerometer availability
+
+//sphericalCamera(200f,  ((accelY / 10) * (MathUtils.PI / 2)), (MathUtils.PI / 2) +  ((accelX / 10) * (MathUtils.PI / 2)) );//-((accelY / 10) * (MathUtils.PI / 2))); //(MathUtils.PI / 2) + ((accelX / 10) * (MathUtils.PI / 2))
+//cam.position.set(upVector(instances.get(0).transform).scl(200f));
+//cam.direction.set(upVector(instances.get(0).transform).scl(-1f));
+//cam.direction.
+// cam.update();
+
+
+//rotation.setEulerAngles(0, ((((accelerometer.axisY() * 10) / 10f) / 10) * 90), ((((accelerometer.axisX() * 10) / 10f) / 10) * 90));
+
+//contactMatrix = new Matrix4(instances.get(1).transform);
+//contactMatrix.setTranslation(contactMatrix.getTranslation(new Vector3(0, 0, 0).sub(upVector(instances.get(0).transform))));
+//instances.get(0).transform.idt().rotate(rotation);
+//nstances.get(0).body.setCenterOfMassTransform(contactMatrix);
+
+//System.out.println(instances.get(0).body.get);
+//instances.get(0).body.setActivationState(Collision.DISABLE_DEACTIVATION);
+
+//    public Vector3 upVector(Matrix4 pos) {
+//        float[] tmp = pos.getValues();
+//        return new Vector3(tmp[Matrix4.M01], tmp[Matrix4.M11], tmp[Matrix4.M21]);
+//    }
+
+//    public void sphericalCamera(float radius, float polar, float elevation) {
+//        float a = radius * MathUtils.cos(elevation);
+//        cam.position.x = radius * MathUtils.sin(elevation);
+//        cam.position.y = a * MathUtils.cos(polar);
+//        cam.position.z = a * MathUtils.sin(polar);
+//    }
