@@ -29,7 +29,7 @@ public class StartScreen extends ScreenAdapter {
     private Stage stage;
     private Texture backgroundTexture;
     private Image image;
-    private OrthographicCamera camera;
+   // private OrthographicCamera camera;
     private FillViewport viewport;
     private MyGdxGame game;
 
@@ -40,11 +40,11 @@ public class StartScreen extends ScreenAdapter {
     public void show()
     {
         viewport = new FillViewport(WORLD_WIDTH,WORLD_HEIGHT);// it stretches the image to fit the screen
-        camera=new OrthographicCamera(Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+       // camera=new OrthographicCamera(Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
         stage = new Stage();
         stage.setViewport(viewport);
 
-        // stage = new Stage(new FitViewport(world_width,world_height ));
+
         Gdx.input.setInputProcessor(stage); //allow to fire input to child actors
         backgroundTexture = new Texture(Gdx.files.internal("wood.jpg"));
 
