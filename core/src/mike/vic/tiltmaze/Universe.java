@@ -36,7 +36,7 @@ import com.badlogic.gdx.utils.Array;
 /**
  * Created by Mike on 2016-03-03.
  */
-public class Universe extends TiltGame {
+public class Universe {
     static public btDynamicsWorld dynamicsWorld;
     static public ModelBuilder builder;
     private Environment environment;

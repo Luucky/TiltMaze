@@ -12,6 +12,6 @@ public class AndroidLauncher extends AndroidApplication {
 		super.onCreate(savedInstanceState);
 		AndroidApplicationConfiguration config = new AndroidApplicationConfiguration();
 		config.useCompass = false;
-		initialize(new TiltGame(), config);
+		initialize(new MyGdxGame(), config);
 	}
 }

@@ -2,6 +2,8 @@ package mike.vic.tiltmaze.desktop;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+
+import mike.vic.tiltmaze.MyGdxGame;
 import mike.vic.tiltmaze.TiltGame;
 
 public class DesktopLauncher {
@@ -10,6 +12,6 @@ public class DesktopLauncher {
 		config.title = "Tilt Maze";
 		//config.width = 600;
 		//config.height = 480;
-		new LwjglApplication(new TiltGame(), config);
+		new LwjglApplication(new MyGdxGame(), config);
 	}
 }
