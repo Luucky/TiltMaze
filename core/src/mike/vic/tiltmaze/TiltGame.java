@@ -1,15 +1,13 @@
 package mike.vic.tiltmaze;
 
 import com.badlogic.gdx.ApplicationListener;
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
-import com.badlogic.gdx.math.Matrix4;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -17,7 +15,6 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class TiltGame implements ApplicationListener {
-
     private Viewport screen;
     private PerspectiveCamera cam;
     private CameraInputController camController;
@@ -29,6 +26,7 @@ public class TiltGame implements ApplicationListener {
     protected Label label;
     protected BitmapFont font;
     protected StringBuilder stringBuilder;
+
 
     @Override
     public void create () {
@@ -54,7 +52,6 @@ public class TiltGame implements ApplicationListener {
         label = new Label(" ", new Label.LabelStyle(font, Color.WHITE));
         stage.addActor(label);
         stringBuilder = new StringBuilder();
-
     }
 
     @Override
@@ -74,8 +71,6 @@ public class TiltGame implements ApplicationListener {
     public void dispose() {
         universe.dispose();
     }
-
-
 
     @Override
     public void pause () {

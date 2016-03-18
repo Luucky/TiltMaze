@@ -1,9 +1,7 @@
 package mike.vic.tiltmaze;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 
 /* This class is going to handle accelerometer data and smooth it out with exponential moving average.
      * alpha = 0 : data becomes 0
