@@ -2,7 +2,7 @@ package mike.vic.tiltmaze.desktop;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import mike.vic.tiltmaze.TiltGame;
+import mike.vic.tiltmaze.TiltMaze;
 
 public class DesktopLauncher {
 	public static void main (String[] arg) {
@@ -10,6 +10,6 @@ public class DesktopLauncher {
 		config.title = "Tilt Maze";
 		//config.width = 600;
 		//config.height = 480;
-		new LwjglApplication(new TiltGame(), config);
+		new LwjglApplication(new TiltMaze(), config);
 	}
 }

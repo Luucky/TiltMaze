@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -14,12 +15,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-public class TiltGame implements ApplicationListener {
+public class TiltGame extends ScreenAdapter {
     private Viewport screen;
     private PerspectiveCamera cam;
     private CameraInputController camController;
 
-    private Accelerometer accelerometer;
     private Universe universe;
 
     protected Stage stage;
@@ -27,10 +27,10 @@ public class TiltGame implements ApplicationListener {
     protected BitmapFont font;
     protected StringBuilder stringBuilder;
 
+    TiltMaze game;
 
-    @Override
-    public void create () {
-        Bullet.init();
+    public TiltGame(TiltMaze g) {
+        game = g;
 
         cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         cam.near = 1f;
@@ -38,13 +38,11 @@ public class TiltGame implements ApplicationListener {
         cam.position.set(0, 17, 0);
         cam.lookAt(0, 0, 0);
         cam.update();
-        camController = new CameraInputController(cam);
-        Gdx.input.setInputProcessor(new InputMultiplexer(camController));
+        //camController = new CameraInputController(cam);
+        Gdx.input.setInputProcessor(new InputMultiplexer());
 
         screen = new ScreenViewport();
         stage = new Stage(screen);
-
-        accelerometer = new Accelerometer(0.1f);
 
         universe = new Universe(cam);
 
@@ -55,11 +53,10 @@ public class TiltGame implements ApplicationListener {
     }
 
     @Override
-    public void render () {
-        accelerometer.smoothing();
+    public void render(float delta) {
         universe.update();
 
-        camController.update();
+        //camController.update();
 
         stringBuilder.setLength(0);
         label.setFontScale(3);
@@ -85,7 +82,6 @@ public class TiltGame implements ApplicationListener {
     }
 }
 
-//boolean available = Gdx.input.isPeripheralAvailable(Peripheral.Accelerometer); checking accelerometer availability
 
 //sphericalCamera(200f,  ((accelY / 10) * (MathUtils.PI / 2)), (MathUtils.PI / 2) +  ((accelX / 10) * (MathUtils.PI / 2)) );//-((accelY / 10) * (MathUtils.PI / 2))); //(MathUtils.PI / 2) + ((accelX / 10) * (MathUtils.PI / 2))
 //cam.position.set(upVector(instances.get(0).transform).scl(200f));
