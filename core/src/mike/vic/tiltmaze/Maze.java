@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
@@ -14,14 +15,19 @@ import com.badlogic.gdx.utils.Array;
 import java.util.Random;
 
 public class Maze {
-    private final float WIDTH, HEIGHT, DEPTH, THICKNESS = 0.1f;
+    private final float WIDTH, DEPTH;
+    final float HEIGHT = 0.6f, THICKNESS = 0.1f;
+    final float minWidth = 16f, minDepth = 26f, minCameraHeight = 32f;
 
-    private final int maxCellsX, maxCellsZ;
+    final int minXcells = 20, minZcells = 23;
+    private final int cellsX, cellsZ;
     private final int[][] maze;
 
     private final float cellUnitX, cellUnitZ, offsetX, offsetZ;
     private Vector3 finishArea;
+
     private Array<Entity> walls;
+
    // private ParticleEffectPool effectPool = new ParticleEffectPool();
 
     public Array<Entity> renderEntities() {
@@ -36,39 +42,46 @@ public class Maze {
         return finishArea;
     }
 
-    public Maze(float friction, float width, float height, float depth, int mazeXcells, int mazeZcells) {
-        WIDTH = width;
-        HEIGHT = height;
-        DEPTH = depth;
+    public float getCameraHeight() {
+        return minCameraHeight + (cellsX - minXcells) * 1.65f;
+    }
 
-        maxCellsX = mazeXcells;
-        maxCellsZ = mazeZcells;
+    public Maze(float friction, int mazeXcells, int mazeZcells) {
+        cellsX = mazeXcells; //20 min
+        cellsZ = mazeZcells; //23 min
+
+        WIDTH = minWidth + (cellsX - minXcells) * 0.8f; //16f min
+        DEPTH = minDepth + (cellsZ - minZcells) * 1.3f; //26f min
 
         walls = new Array<Entity>();
-        walls.add(buildPlane());
 
-        cellUnitX = WIDTH / maxCellsX;
-        cellUnitZ = DEPTH / maxCellsZ;
+        cellUnitX = WIDTH / cellsX;
+        cellUnitZ = DEPTH / cellsZ;
         offsetX = -WIDTH / 2;
         offsetZ = -DEPTH / 2;
 
         finishArea = new Vector3(-offsetX - cellUnitX / 2, 0, -offsetZ - cellUnitZ / 2);
 
-        maze = new int[maxCellsX][maxCellsZ];
-        while (maze[maxCellsX - 1][maxCellsZ - 1] == 0) generateMaze(0, 0);
+        maze = new int[cellsX][cellsZ];
+    }
+
+    public boolean generateMaze() {
+        while (maze[cellsX - 1][cellsZ - 1] == 0) generateMaze(0, 0);
         buildMaze();
 
-        display();
+        return true;
     }
 
     private void buildMaze() {
+        walls.add(buildPlane());
+
         int continuousWallX = 0;
         int continuousWallZ = 0;
 
-        walls.add(buildWall(0, 0, maxCellsX, true)); // NORTH WALL
-        walls.add(buildWall(0, maxCellsZ, maxCellsX, true)); // SOUTH WALL
-        for (int i = 0; i < maxCellsZ; i++) {
-            for (int j = 0; j < maxCellsX; j++) {
+        walls.add(buildWall(0, 0, cellsX, true)); // NORTH WALL
+        walls.add(buildWall(0, cellsZ, cellsX, true)); // SOUTH WALL
+        for (int i = 0; i < cellsZ; i++) {
+            for (int j = 0; j < cellsX; j++) {
                 if ((maze[j][i] & 1) == 0) {
                     continuousWallX++;
                 } else if (continuousWallX != 0) {
@@ -77,23 +90,22 @@ public class Maze {
                     continuousWallX = 0;
                 }
             }
-            if (continuousWallX != 0) walls.add(buildWall(maxCellsX - continuousWallX, i, continuousWallX, true));
+            if (continuousWallX != 0) walls.add(buildWall(cellsX - continuousWallX, i, continuousWallX, true));
             continuousWallX = 0;
         }
 
-        walls.add(buildWall(0, 0, maxCellsZ, false)); // WEST WALL
-        walls.add(buildWall(maxCellsX, 0, maxCellsZ, false)); //EAST WALL;
-        for (int i = 0; i < maxCellsX; i++) {
-            for (int j = 0; j < maxCellsZ; j++) {
+        walls.add(buildWall(0, 0, cellsZ, false)); // WEST WALL
+        walls.add(buildWall(cellsX, 0, cellsZ, false)); //EAST WALL;
+        for (int i = 0; i < cellsX; i++) {
+            for (int j = 0; j < cellsZ; j++) {
                 if ((maze[i][j] & 8) == 0)
                   continuousWallZ++;
                 else if (continuousWallZ != 0) {
                     walls.add(buildWall(i, j - continuousWallZ, continuousWallZ, false));
-                    System.out.println("west: " + i + " " + j + " " + continuousWallZ);
                     continuousWallZ = 0;
                 }
             }
-            if (continuousWallZ != 0) walls.add(buildWall(i, maxCellsZ - continuousWallZ, continuousWallZ, false));
+            if (continuousWallZ != 0) walls.add(buildWall(i, cellsZ - continuousWallZ, continuousWallZ, false));
             continuousWallZ = 0;
         }
     }
@@ -103,7 +115,7 @@ public class Maze {
         float wallLength = (horizontal ? cellUnitX : cellUnitZ) * length;
 
         Entity entity = new Entity((Universe.builder.createBox(horizontal ? wallLength : THICKNESS, HEIGHT, !horizontal ? wallLength : THICKNESS, GL20.GL_TRIANGLES,
-                new Material(ColorAttribute.createDiffuse(Color.RED)), Usage.Position | Usage.Normal)),
+                new Material(TextureAttribute.createDiffuse(Assets.darkWood)), Usage.Position | Usage.TextureCoordinates | Usage.Normal)),
                 new btBoxShape(new Vector3((horizontal ? wallLength : THICKNESS) / 2, HEIGHT / 2, (!horizontal ? wallLength : THICKNESS) / 2)), 0);
         entity.body.setCollisionFlags(entity.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
         entity.transform.trn((horizontal ? wallLength / 2 : 0) + posX + offsetX + THICKNESS, 0, (!horizontal ? wallLength / 2 : 0) + posZ + offsetZ - THICKNESS);
@@ -116,40 +128,9 @@ public class Maze {
         return entity;
     }
 
-
-//    public void print() {
-//        for(int i = 0; i < maxCellsX; i++) {
-//            for(int j = 0; j < maxCellsZ; j++)
-//                if (maze[j][i] > 9) System.out.print(" " + maze[j][i] + " ");
-//                else System.out.print("  " + maze[j][i] + " ");
-//            System.out.println();
-//        }
-//    }
-
-    public void display() {
-        for (int i = 0; i < maxCellsZ; i++) {
-            // draw the north edge
-            for (int j = 0; j < maxCellsX; j++) {
-                System.out.print((maze[j][i] & 1) == 0 ? "+---" : "+   ");
-            }
-            System.out.println("+");
-            // draw the west edge
-            for (int j = 0; j < maxCellsX; j++) {
-                System.out.print((maze[j][i] & 8) == 0 ? "|   " : "    ");
-            }
-            System.out.println("|");
-        }
-        // draw the bottom line
-        for (int j = 0; j < maxCellsX; j++) {
-            System.out.print("+---");
-        }
-        System.out.println("+");
-    }
-
-
     private Entity buildPlane() {
         Entity entity = new Entity((Universe.builder.createBox(WIDTH, HEIGHT, DEPTH, GL20.GL_TRIANGLES,
-                new Material(ColorAttribute.createDiffuse(Color.GREEN)), Usage.Position | Usage.Normal)),
+                new Material(TextureAttribute.createDiffuse(Assets.lightWood)), Usage.Position | Usage.TextureCoordinates | Usage.Normal)),
                 new btBoxShape(new Vector3(WIDTH / 2, HEIGHT / 2, DEPTH / 2)), 0);
         entity.body.setCollisionFlags(entity.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
         entity.transform.trn(0, -HEIGHT, 0);
@@ -171,7 +152,7 @@ public class Maze {
             swap(directions, dir, rnd.nextInt(directions.length - 1));
 
         for (dir = 0; dir < 4; dir++) {
-            if (between(cx + directions[dir].dx, maxCellsX) && between(cy + directions[dir].dy, maxCellsZ) && (maze[cx + directions[dir].dx][cy + directions[dir].dy] == 0)) {
+            if (between(cx + directions[dir].dx, cellsX) && between(cy + directions[dir].dy, cellsZ) && (maze[cx + directions[dir].dx][cy + directions[dir].dy] == 0)) {
                 maze[cx][cy] |= directions[dir].bit;
                 maze[cx + directions[dir].dx][cy + directions[dir].dy] |= directions[dir].opposite.bit;
                 generateMaze(cx + directions[dir].dx, cy + directions[dir].dy);
@@ -218,3 +199,23 @@ public class Maze {
         walls = null;
     }
 }
+
+//    public void display() {
+//        for (int i = 0; i < maxCellsZ; i++) {
+//            // draw the north edge
+//            for (int j = 0; j < maxCellsX; j++) {
+//                System.out.print((maze[j][i] & 1) == 0 ? "+---" : "+   ");
+//            }
+//            System.out.println("+");
+//            // draw the west edge
+//            for (int j = 0; j < maxCellsX; j++) {
+//                System.out.print((maze[j][i] & 8) == 0 ? "|   " : "    ");
+//            }
+//            System.out.println("|");
+//        }
+//        // draw the bottom line
+//        for (int j = 0; j < maxCellsX; j++) {
+//            System.out.print("+---");
+//        }
+//        System.out.println("+");
+//    }

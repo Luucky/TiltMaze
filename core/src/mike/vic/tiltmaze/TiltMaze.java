@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Action;
@@ -21,19 +22,21 @@ import static com.badlogic.gdx.scenes.scene2d.actions.Actions.*;
 
 
 public class TiltMaze extends Game {
+    static public final int WIDTH = 600;
+    static public final int HEIGHT = 1024;
+
     private Accelerometer accelerometer;
 
     @Override
     public void create () {
         Bullet.init();
         //Settings.load();
-        //Assets.load();
+        Assets.load();
+
         if (!Gdx.input.isPeripheralAvailable(Input.Peripheral.Accelerometer)) {
-
+            //dialog saying you need accelerometer
         }
-
-         accelerometer = new Accelerometer(0.1f);
-
+        accelerometer = new Accelerometer(0.1f);
         setScreen(new MenuScreen(this));
     }
 

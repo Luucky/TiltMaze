@@ -6,8 +6,8 @@ public class Timer {
     static private float time = 0f;
     static private boolean progression = true;
 
-    static public float getNow() {
-        progression = false;
+    static public float getNow(boolean halt) {
+        progression = !halt;
         return time;
     }
 

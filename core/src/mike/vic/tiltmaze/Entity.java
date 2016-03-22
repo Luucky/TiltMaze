@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody.btRigidBodyConstructionInfo;
 import com.badlogic.gdx.utils.Disposable;
 
 /**
@@ -27,7 +28,7 @@ class Entity extends ModelInstance implements Disposable {
         if (mass > 0)
             shape.calculateLocalInertia(mass, inertia);
         else inertia = new Vector3();
-        btRigidBody.btRigidBodyConstructionInfo structInfo = new btRigidBody.btRigidBodyConstructionInfo(mass, null, shape, inertia);
+        btRigidBodyConstructionInfo structInfo = new btRigidBodyConstructionInfo(mass, null, shape, inertia);
         body = new btRigidBody(structInfo);
         structInfo.dispose();
         body.setMotionState(motionState);

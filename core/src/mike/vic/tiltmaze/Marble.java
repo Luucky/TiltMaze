@@ -1,10 +1,9 @@
 package mike.vic.tiltmaze;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.VertexAttributes;
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.Material;
-import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
@@ -14,8 +13,9 @@ class Marble extends Entity {
     private Vector3 position;
 
     public Marble(float diameter, float mass, float friction, Vector3 startPoint) {
-        super(Universe.builder.createSphere(diameter, diameter, diameter, 100, 100, GL20.GL_TRIANGLES, new Material(ColorAttribute.createDiffuse(Color.BLUE)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal)
-                , new btSphereShape(diameter / 2), mass);
+        super(Universe.builder.createSphere(diameter, diameter, diameter, 100, 100, GL20.GL_TRIANGLES,
+                new Material(TextureAttribute.createDiffuse(Assets.metal)), Usage.Position | Usage.TextureCoordinates | Usage.Normal),
+                new btSphereShape(diameter / 2), mass);
         body.setCollisionFlags(body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_CUSTOM_MATERIAL_CALLBACK);
         position = startPoint;
         transform.trn(position);
@@ -26,19 +26,6 @@ class Marble extends Entity {
         body.setContactCallbackFlag(OBJECT_FLAG);
         body.setContactCallbackFilter(GROUND_FLAG);
     }
-
-//        static public Model createModel(float diameter) {
-//            model = Universe.builder.createSphere(diameter, diameter, diameter, 100, 100, GL20.GL_TRIANGLES, new Material(ColorAttribute.createDiffuse(Color.GREEN)), VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-//            System.out.println(model.toString());
-//            createCollisionObject(diameter);
-//            return model;
-//        }
-//
-//        static public btCollisionShape createCollisionObject(float diameter) {
-//            collisionShape = ;
-//            System.out.println(collisionShape);
-//            return collisionShape;
-//        }
 
     public void update() {
         transform.getTranslation(position);

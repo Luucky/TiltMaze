@@ -9,15 +9,22 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import org.omg.CORBA.MARSHAL;
+
 public class TiltGame extends ScreenAdapter {
-    private Viewport screen;
-    private PerspectiveCamera cam;
+    TiltMaze game;
+
+    Viewport screen;
+    PerspectiveCamera cam;
     private CameraInputController camController;
 
     private Universe universe;
@@ -27,21 +34,16 @@ public class TiltGame extends ScreenAdapter {
     protected BitmapFont font;
     protected StringBuilder stringBuilder;
 
-    TiltMaze game;
 
-    public TiltGame(TiltMaze g) {
-        game = g;
-
-        cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+    public TiltGame() {
+        cam = new PerspectiveCamera(50, TiltMaze.WIDTH, TiltMaze.HEIGHT);
         cam.near = 1f;
         cam.far = 1000f;
-        cam.position.set(0, 17, 0);
-        cam.lookAt(0, 0, 0);
         cam.update();
-        //camController = new CameraInputController(cam);
-        Gdx.input.setInputProcessor(new InputMultiplexer());
+        camController = new CameraInputController(cam);
+        //Gdx.input.setInputProcessor(new InputMultiplexer(camController));
 
-        screen = new ScreenViewport();
+        screen = new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT);
         stage = new Stage(screen);
 
         universe = new Universe(cam);
@@ -52,11 +54,17 @@ public class TiltGame extends ScreenAdapter {
         stringBuilder = new StringBuilder();
     }
 
+    public TiltGame showScreen(TiltMaze gam) {
+        game = gam;
+        universe.genesis();
+        return this;
+    }
+
     @Override
     public void render(float delta) {
         universe.update();
 
-        //camController.update();
+ //       camController.update();
 
         stringBuilder.setLength(0);
         label.setFontScale(3);
@@ -67,6 +75,7 @@ public class TiltGame extends ScreenAdapter {
     @Override
     public void dispose() {
         universe.dispose();
+        stage.dispose();
     }
 
     @Override
@@ -105,9 +114,3 @@ public class TiltGame extends ScreenAdapter {
 //        return new Vector3(tmp[Matrix4.M01], tmp[Matrix4.M11], tmp[Matrix4.M21]);
 //    }
 
-//    public void sphericalCamera(float radius, float polar, float elevation) {
-//        float a = radius * MathUtils.cos(elevation);
-//        cam.position.x = radius * MathUtils.sin(elevation);
-//        cam.position.y = a * MathUtils.cos(polar);
-//        cam.position.z = a * MathUtils.sin(polar);
-//    }
