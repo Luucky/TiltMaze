@@ -64,6 +64,7 @@ public class Universe {
             if (userValue0 == 88 || userValue1 == 88) {
                 gravity.set(-Accelerometer.axisX() / 3 * 9.8f, -9.8f, Accelerometer.axisY() / 3 * 9.8f);
                 dynamicsWorld.setGravity(gravity);
+                marble.update();
             }
             return true;
         }
@@ -113,7 +114,7 @@ public class Universe {
     private boolean zoomed = false;
 
     private void zoomOnMarble() {
-        cam.position.interpolate(new Vector3(marble.getPosition()).sub(0, maze.getCameraHeight(), 0), 0.1f, Interpolation.linear);
+        cam.position.interpolate(new Vector3(marble.getPosition()).add(0, maze.getCameraHeight() - 20, 0), 0.1f, Interpolation.linear);
         zoomed = true;
     }
 
@@ -137,7 +138,7 @@ public class Universe {
                     Gdx.input.setInputProcessor(new InputAdapter() {
                         @Override
                         public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                            zoomOnMarble();
+                            zoomed = !zoomed;
                             return true;
                         }
 
@@ -157,6 +158,7 @@ public class Universe {
 
 
                 if (!zoomed) cameraOverMaze();
+                else zoomOnMarble();
                 Timer.progress();
                 if (Timer.getState() && maze.getFinishArea().dst2(marble.getPosition()) < 0.5) {
                     System.out.println(Timer.getNow(true));

@@ -8,6 +8,8 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
@@ -48,8 +50,13 @@ public class TiltGame extends ScreenAdapter {
 
         universe = new Universe(cam);
 
-        font = new BitmapFont();
-        label = new Label(" ", new Label.LabelStyle(font, Color.WHITE));
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("BeTrueToYourSchool.ttf"));
+        FreeTypeFontParameter parameter = new FreeTypeFontParameter();
+        parameter.size = 60;
+        font = generator.generateFont(parameter); // font size 12 pixels
+        generator.dispose(); // don't forget to dispose to avoid memory leaks!
+        label = new Label("", new Label.LabelStyle(font, Color.WHITE));
+        label.setPosition(font.getSpaceWidth() * 2, TiltMaze.HEIGHT - font.getCapHeight());
         stage.addActor(label);
         stringBuilder = new StringBuilder();
     }
@@ -63,12 +70,20 @@ public class TiltGame extends ScreenAdapter {
     @Override
     public void render(float delta) {
         universe.update();
-
  //       camController.update();
 
-        stringBuilder.setLength(0);
-        label.setFontScale(3);
-        label.setText(stringBuilder);
+        if (game != null) {
+            stringBuilder.setLength(0);
+
+            stringBuilder.append(Timer.getNow(false));
+            if (Timer.getNow(false) > 100)
+                stringBuilder.setLength(6);
+            else if (Timer.getNow(false) > 10)
+                stringBuilder.setLength(5);
+            else stringBuilder.setLength(4);
+            stringBuilder.append("'");
+            label.setText(stringBuilder);
+        }
         stage.draw();
     }
 
