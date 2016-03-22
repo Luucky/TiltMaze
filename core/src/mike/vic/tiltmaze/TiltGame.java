@@ -27,7 +27,7 @@ public class TiltGame extends ScreenAdapter {
 
     Viewport screen;
     PerspectiveCamera cam;
-    private CameraInputController camController;
+    private CameraInputController camControllers;
 
     private Universe universe;
 
@@ -42,7 +42,7 @@ public class TiltGame extends ScreenAdapter {
         cam.near = 1f;
         cam.far = 1000f;
         cam.update();
-        camController = new CameraInputController(cam);
+        camControllers = new CameraInputController(cam);
         //Gdx.input.setInputProcessor(new InputMultiplexer(camController));
 
         screen = new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT);
