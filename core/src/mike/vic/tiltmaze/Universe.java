@@ -1,8 +1,6 @@
 package mike.vic.tiltmaze;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -12,8 +10,6 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Quaternion;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.ContactListener;
 import com.badlogic.gdx.physics.bullet.collision.btBroadphaseInterface;
@@ -26,7 +22,6 @@ import com.badlogic.gdx.physics.bullet.dynamics.btConstraintSolver;
 import com.badlogic.gdx.physics.bullet.dynamics.btDiscreteDynamicsWorld;
 import com.badlogic.gdx.physics.bullet.dynamics.btDynamicsWorld;
 import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
-import com.badlogic.gdx.utils.Array;
 
 public class Universe {
     public static final int STATE_OVER = 0;
@@ -62,9 +57,11 @@ public class Universe {
             if (userValue0 == 77 || userValue1 == 77)
                 marble.body.setDamping(0, 0.6f);
             if (userValue0 == 88 || userValue1 == 88) {
-                gravity.set(-Accelerometer.axisX() / 3 * 9.8f, -9.8f, Accelerometer.axisY() / 3 * 9.8f);
-                dynamicsWorld.setGravity(gravity);
-                marble.update();
+                if (!gravity.isZero()) {
+                    gravity.set(-Accelerometer.axisX() / 3 * 9.8f, -9.8f, Accelerometer.axisY() / 3 * 9.8f);
+                    dynamicsWorld.setGravity(gravity);
+                    marble.update();
+                }
             }
             return true;
         }
@@ -84,42 +81,60 @@ public class Universe {
         broadphase = new btDbvtBroadphase();
         constraintSolver = new btSequentialImpulseConstraintSolver();
         dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, constraintSolver, collisionConfig);
-        gravity = new Vector3();
-        dynamicsWorld.setGravity(gravity);
+        dynamicsWorld.setGravity(new Vector3());
         contactListener = new ContactOverseer();
 
         sceneria = new ModelInstance(Assets.skydome);
         sceneria.transform.trn(0, -2.5f, 0);
-        maze = new Maze(0.4f, 30, 33);
-        marble = new Marble(0.33f, 0.1f, 0.4f, maze.getStartPoint());
+        marble = new Marble(0.39f, 0.1f, 0.4f);
 
         state = STATE_READY;
 
-        Timer.reset();
+        TiltTimer.reset();
     }
+
+    Vector3 vector = new Vector3();
 
     public void cameraRevolveMarble(float radius, float polar, float elevation) {
         float a = radius * MathUtils.sin(elevation);
-        cam.position.lerp(new Vector3(a * MathUtils.cos(polar), radius * MathUtils.cos(elevation), a * MathUtils.sin(polar)).add(marble.getPosition()), 0.5f);
+        cam.position.lerp(vector.set(a * MathUtils.cos(polar), radius * MathUtils.cos(elevation), a * MathUtils.sin(polar)).add(marble.getPosition()), 0.5f);
         cam.up.set(0, 1, 0);
         cam.lookAt(marble.getPosition());
     }
 
     private void cameraOverMaze() {
-        cam.position.interpolate(new Vector3(0, maze.getCameraHeight(), 0), 0.1f, Interpolation.linear);
-        cam.direction.interpolate(new Vector3(0, -1, 0), 0.1f, Interpolation.linear);
-        cam.up.interpolate(new Vector3(0, 0, -1), 0.1f, Interpolation.linear);
+        cam.position.interpolate(vector.set(0, maze.getCameraHeight(), 0), 0.1f, Interpolation.linear);
+        cam.direction.interpolate(vector.set(0, -1, 0), 0.1f, Interpolation.linear);
+        cam.up.interpolate(vector.set(0, 0, -1), 0.1f, Interpolation.linear);
     }
 
-    private boolean zoomed = false;
+    private boolean zoomed = true;
+
+    public void zoomSwitch() {
+        zoomed = !zoomed;
+    }
 
     private void zoomOnMarble() {
-        cam.position.interpolate(new Vector3(marble.getPosition()).add(0, maze.getCameraHeight() - 20, 0), 0.1f, Interpolation.linear);
-        zoomed = true;
+        cam.position.interpolate(vector.set(marble.getPosition()).add(0, maze.getCameraHeight() - 20, 0), 0.1f, Interpolation.linear);
+        cam.direction.interpolate(vector.set(0, -1, 0), 0.1f, Interpolation.linear);
+        cam.up.interpolate(vector.set(0, 0, -1), 0.1f, Interpolation.linear);
     }
 
+    public void genesis(int mazeSizeAdjust) {
+        maze = new Maze(0.4f, mazeSizeAdjust);
+        state = STATE_INIT;
+    }
 
-    public void genesis() { state = STATE_INIT; }
+    public void freeze() {
+        state = STATE_PAUSED;
+    }
+
+    public void unfreeze() {
+        state = STATE_RUNNING;
+
+        marble.activate();
+        gravity.set(0, -9.8f, 0);
+    }
 
     public void update() {
         final float delta = Math.min(1f / 60f, Gdx.graphics.getDeltaTime());
@@ -127,50 +142,45 @@ public class Universe {
 
         switch (state) {
             case STATE_READY:
-                cameraRevolveMarble(3f, MathUtils.PI2 * (Timer.getNow(false) % 30 / 30), MathUtils.PI / 7 * 4);
-                Timer.progress();
+                cameraRevolveMarble(3f, MathUtils.PI2 * (TiltTimer.getNow(false) % 30 / 30), MathUtils.PI / 7 * 4);
                 break;
             case STATE_INIT:
                 if (maze.generateMaze()) {
+                    System.out.println("Check");
+                    marble.setPosition(maze.getStartPoint().add(0, marble.getRadius() - Maze.HEIGHT + 0.5f, 0));
+                    TiltTimer.countdown();
                     state = STATE_RUNNING;
-                    Timer.reset();
-
-                    Gdx.input.setInputProcessor(new InputAdapter() {
-                        @Override
-                        public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                            zoomed = !zoomed;
-                            return true;
-                        }
-
-                        @Override
-                        public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-
-                            return true;
-                        }
-                    });
                 }
                 break;
             case STATE_RUNNING:
-                if (gravity.isZero()) {
-                    gravity.set(0, -9.8f, 0);
+                if (TiltTimer.getNow(false) > 0 && gravity == null) {
+                    gravity = new Vector3(0, -9.8f, 0);
                     dynamicsWorld.setGravity(gravity);
+                    zoomSwitch();
                 }
 
+                if (zoomed)
+                    zoomOnMarble();
+                else cameraOverMaze();
 
-                if (!zoomed) cameraOverMaze();
-                else zoomOnMarble();
-                Timer.progress();
-                if (Timer.getState() && maze.getFinishArea().dst2(marble.getPosition()) < 0.5) {
-                    System.out.println(Timer.getNow(true));
+                if (TiltTimer.getState() && maze.getFinishArea().dst2(marble.getPosition()) < 0.5) {
+                    System.out.println(TiltTimer.getNow(true));
                 }
                 break;
+            case STATE_PAUSED: {
+                marble.deactivate();
+                gravity.set(0, 0, 0);
+            }
         }
         cam.update();
 
         modelBatch.begin(cam);
         modelBatch.render(sceneria, environment);
         modelBatch.render(marble, environment);
-        modelBatch.render(maze.renderEntities(), environment);
+        if (maze != null) {
+            modelBatch.render(maze.renderEntities(), environment);
+           // System.out.println(maze.renderEntities().size);
+        }
         modelBatch.end();
     }
 

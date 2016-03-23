@@ -15,11 +15,14 @@ import com.badlogic.gdx.utils.Array;
 import java.util.Random;
 
 public class Maze {
-    private final float WIDTH, DEPTH;
-    final float HEIGHT = 0.6f, THICKNESS = 0.1f;
-    final float minWidth = 16f, minDepth = 26f, minCameraHeight = 32f;
+    static public final int minXcells = 20, minZcells = 23;
 
-    final int minXcells = 20, minZcells = 23;
+    final float WIDTH, DEPTH, THICKNESS = 0.1f;
+    static final float HEIGHT = 0.6f;
+
+    final float minWidth = 16f, minDepth = 26f;
+    final float minCameraHeight = 32f;
+
     private final int cellsX, cellsZ;
     private final int[][] maze;
 
@@ -28,30 +31,16 @@ public class Maze {
 
     private Array<Entity> walls;
 
-   // private ParticleEffectPool effectPool = new ParticleEffectPool();
-
     public Array<Entity> renderEntities() {
         return walls;
     }
 
-    public Vector3 getStartPoint() {
-        return new Vector3(offsetX + cellUnitX / 2, 3, offsetZ + cellUnitZ / 2);
-    }
+    public Maze(float friction, int sizeAdjust) {
+        cellsX = minXcells + sizeAdjust; //20 min
+        cellsZ = minZcells + sizeAdjust; //23 min
 
-    public Vector3 getFinishArea() {
-        return finishArea;
-    }
-
-    public float getCameraHeight() {
-        return minCameraHeight + (cellsX - minXcells) * 1.65f;
-    }
-
-    public Maze(float friction, int mazeXcells, int mazeZcells) {
-        cellsX = mazeXcells; //20 min
-        cellsZ = mazeZcells; //23 min
-
-        WIDTH = minWidth + (cellsX - minXcells) * 0.8f; //16f min
-        DEPTH = minDepth + (cellsZ - minZcells) * 1.3f; //26f min
+        WIDTH = minWidth + (sizeAdjust) * 0.8f; //16f min
+        DEPTH = minDepth + (sizeAdjust) * 1.3f; //26f min
 
         walls = new Array<Entity>();
 
@@ -65,11 +54,23 @@ public class Maze {
         maze = new int[cellsX][cellsZ];
     }
 
+    public Vector3 getStartPoint() {
+        return new Vector3(offsetX + cellUnitX / 2, 0, offsetZ + cellUnitZ / 2);
+    }
+
+    public Vector3 getFinishArea() {
+        return finishArea;
+    }
+
+    public float getCameraHeight() {
+        return minCameraHeight + (cellsX - minXcells) * 1.65f;
+    }
+
     public boolean generateMaze() {
         while (maze[cellsX - 1][cellsZ - 1] == 0) generateMaze(0, 0);
         buildMaze();
 
-        return true;
+        return maze[cellsX - 1][cellsZ - 1] != 0;
     }
 
     private void buildMaze() {

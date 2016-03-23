@@ -31,7 +31,6 @@ public class MenuScreen extends ScreenAdapter {
     TiltMaze game;
 
     Splash splashScreen;
-    TiltGame gameScreen;
 
     private class Splash extends Actor {
         Splash() {}
@@ -44,40 +43,38 @@ public class MenuScreen extends ScreenAdapter {
         }
     }
 
-    public MenuScreen(TiltMaze gam) {
-        game = gam;
+
+    public MenuScreen(TiltMaze g) {
+        game = g;
         viewport = new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT);
         stage = new Stage(viewport);
-        Gdx.input.setInputProcessor(stage); //allow to fire input to child actors
+        Gdx.input.setInputProcessor(stage);
 
         playButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(Assets.play)),
                                      new TextureRegionDrawable(new TextureRegion(Assets.playPressed)));
         playButton.setPosition(TiltMaze.WIDTH / 2 - playButton.getWidth() / 2, TiltMaze.HEIGHT / 4);
+        playButton.addAction(sequence(fadeOut(0), delay(6), fadeIn(1)));
         playButton.addListener(new ActorGestureListener() {
             @Override
-            public void tap(InputEvent event, float x, float y, int count, int button) {
-                super.tap(event, x, y, count, button);
-                game.setScreen(gameScreen.showScreen(game));
+            public void tap(InputEvent event, float x, float y, int count, int button) { // on tap event
+                if (playButton.getActions().size == 0) // if play button has finished fading in
+                    game.setScreen(new MazeSettingsScreen(game, viewport)); // brings you to the maze options screen
             }
         });
-        playButton.addAction(fadeOut(0));
 
-        stage.addActor(playButton);
+
         stage.addActor(splashScreen = new Splash());
+        splashScreen.addAction(sequence(delay(2),fadeOut(4)));
+        stage.addActor(playButton);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0f, 0f, 0f, 0);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        if (gameScreen == null && Assets.loaded()) {
-            splashScreen.addAction(fadeOut(7));
-            playButton.addAction(sequence(delay(7), fadeIn(1)));
-            gameScreen = new TiltGame();
-        }
 
-        if (gameScreen != null) gameScreen.render(delta);
+//            gameScreen = new TiltGame(); // creates an instance of the game screen to achieve the menu with 3d world in the background effect
+
+        //if (gameScreen != null) gameScreen.render(delta); // the 3d world needs to be rendered to be visible, needs a check to avoid nullPointerException
 
         stage.act(delta);
         stage.draw();

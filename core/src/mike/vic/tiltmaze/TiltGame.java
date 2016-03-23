@@ -1,26 +1,20 @@
 package mike.vic.tiltmaze;
 
-import com.badlogic.gdx.ApplicationListener;
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.physics.bullet.Bullet;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
+import com.badlogic.gdx.scenes.scene2d.ui.Slider;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FillViewport;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-
-import org.omg.CORBA.MARSHAL;
 
 public class TiltGame extends ScreenAdapter {
     TiltMaze game;
@@ -31,11 +25,12 @@ public class TiltGame extends ScreenAdapter {
 
     private Universe universe;
 
-    protected Stage stage;
-    protected Label label;
-    protected BitmapFont font;
-    protected StringBuilder stringBuilder;
+    private Stage stage;
+    Label timer, countdown;
+    private StringBuilder stringBuilder;
 
+    Slider slider;
+    Label mazeValues;
 
     public TiltGame() {
         cam = new PerspectiveCamera(50, TiltMaze.WIDTH, TiltMaze.HEIGHT);
@@ -43,47 +38,73 @@ public class TiltGame extends ScreenAdapter {
         cam.far = 1000f;
         cam.update();
         camControllers = new CameraInputController(cam);
-        //Gdx.input.setInputProcessor(new InputMultiplexer(camController));
 
         screen = new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT);
         stage = new Stage(screen);
 
         universe = new Universe(cam);
 
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("BeTrueToYourSchool.ttf"));
-        FreeTypeFontParameter parameter = new FreeTypeFontParameter();
-        parameter.size = 60;
-        font = generator.generateFont(parameter); // font size 12 pixels
-        generator.dispose(); // don't forget to dispose to avoid memory leaks!
-        label = new Label("", new Label.LabelStyle(font, Color.WHITE));
-        label.setPosition(font.getSpaceWidth() * 2, TiltMaze.HEIGHT - font.getCapHeight());
-        stage.addActor(label);
+        LabelStyle timeStyle = new LabelStyle(Assets.timeFont, Color.WHITE);
+        timer = new Label("", timeStyle);
+        timer.setPosition(Assets.timeFont.getSpaceWidth() * 2, TiltMaze.HEIGHT - 28);
+
+        countdown = new Label("", timeStyle);
+        countdown.setPosition(TiltMaze.WIDTH / 2, TiltMaze.HEIGHT / 2, Align.center);
+
         stringBuilder = new StringBuilder();
+        stage.addActor(timer);
+        stage.addActor(countdown);
     }
 
-    public TiltGame showScreen(TiltMaze gam) {
-        game = gam;
-        universe.genesis();
+    public TiltGame showScreen(TiltMaze g, int mazeSizeAdjust) {
+        game = g;
+
+        universe.genesis(mazeSizeAdjust);
+
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            @Override
+            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                universe.zoomSwitch();
+                return true;
+            }
+        });
+
         return this;
     }
 
     @Override
     public void render(float delta) {
+        Gdx.gl.glClearColor(0f, 0f, 0f, 0);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
         universe.update();
- //       camController.update();
 
         if (game != null) {
-            stringBuilder.setLength(0);
-
-            stringBuilder.append(Timer.getNow(false));
-            if (Timer.getNow(false) > 100)
+            stringBuilder.append(TiltTimer.getNow(false));
+            if (TiltTimer.getNow(false) > 100)
                 stringBuilder.setLength(6);
-            else if (Timer.getNow(false) > 10)
+            else if (TiltTimer.getNow(false) > 10)
                 stringBuilder.setLength(5);
             else stringBuilder.setLength(4);
-            stringBuilder.append("'");
-            label.setText(stringBuilder);
+
+            if (TiltTimer.getNow(false) > 0) {
+                stringBuilder.append("'");
+                timer.setText(stringBuilder);
+            }
+            stringBuilder.setLength(0);
+
+            if (TiltTimer.getNow(false) < 0) {
+                stringBuilder.append(-TiltTimer.getNow(false));
+                stringBuilder.setLength(1);
+                countdown.setText(stringBuilder);
+            } else if (TiltTimer.getNow(false) < 3) {
+                stringBuilder.append("Go!");
+                countdown.setPosition(TiltMaze.WIDTH / 2, TiltMaze.HEIGHT / 2, Align.center);
+                countdown.setText(stringBuilder);
+            } else countdown.setText(stringBuilder);
+            stringBuilder.setLength(0);
         }
+        stage.act(delta);
         stage.draw();
     }
 
@@ -95,10 +116,22 @@ public class TiltGame extends ScreenAdapter {
 
     @Override
     public void pause () {
+        universe.freeze();
+        TiltTimer.getNow(true);
+        game.setScreen(new PauseScreen(game));
     }
 
     @Override
-    public void resume () {
+    public void resume() {
+        TiltTimer.start();
+        universe.unfreeze();
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            @Override
+            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                universe.zoomSwitch();
+                return true;
+            }
+        });
     }
 
     @Override
