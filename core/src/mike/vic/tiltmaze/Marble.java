@@ -38,15 +38,17 @@ class Marble extends Entity {
 
     public void activate() {
         body.setActivationState(Collision.DISABLE_DEACTIVATION);
-        body.setLinearVelocity(lastVelocity);
+        //body.setLinearVelocity(lastLinearVelocity);
+        //body.setAngularVelocity(lastAngularVelocity);
     }
 
-    private Vector3 lastVelocity;
+    private Vector3 lastLinearVelocity, lastAngularVelocity, zeroVelocity = new Vector3();
 
     public void deactivate() {
-        lastVelocity = body.getLinearVelocity();
-        body.setLinearVelocity(new Vector3());
-        body.setAngularVelocity(new Vector3());
+        lastLinearVelocity = body.getLinearVelocity();
+        lastAngularVelocity = body.getAngularVelocity();
+        body.setLinearVelocity(zeroVelocity);
+        body.setAngularVelocity(zeroVelocity);
         body.setActivationState(0);
     }
 

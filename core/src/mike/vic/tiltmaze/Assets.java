@@ -24,6 +24,7 @@ public class Assets {
     static public Texture metal;
     static public Texture lightWood;
     static public Texture darkWood;
+    static public Texture finishArea;
 
     static public Texture splashScreen;
     static public Texture play;
@@ -37,6 +38,10 @@ public class Assets {
 
     static public Texture proceed;
     static public Texture proceedPressed;
+
+    static public Texture timeBoard;
+    static public Texture newGame;
+    static public Texture newGamePressed;
 
     static public BitmapFont timeFont;
     static public BitmapFont settingsFont;
@@ -52,6 +57,7 @@ public class Assets {
         metal = loadTexture("materials/metal.jpg");
         lightWood = loadTexture("materials/wood-light.jpg");
         darkWood = loadTexture("materials/woodgrain-dark.jpg");
+        finishArea = loadTexture("materials/finish-area.jpg");
 
         splashScreen = loadTexture("splash.png");
         play = loadTexture("buttons/plays.png");
@@ -65,6 +71,10 @@ public class Assets {
 
         proceed = loadTexture("buttons/proceed.png");
         proceedPressed = loadTexture("buttons/proceedPressed.png");
+
+        timeBoard = loadTexture("timeBoard.png");
+        newGame = loadTexture("buttons/newGame.png");
+        newGamePressed = loadTexture("buttons/newGamePressed.png");
 
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("rosewood.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();

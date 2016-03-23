@@ -20,21 +20,22 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 
 public class MazeSettingsScreen extends ScreenAdapter {
+    private TiltMaze game; // reference to switch screens
+
     private Stage settingsStage;
-    private Image board;
+    private Image board; // background image
     private StringBuilder valuesBuilder;
     private Label title, mazeWidth, mazeHeight;
     private Slider valuesAdjuster;
+
     private ImageButton startButton;
 
-    private TiltMaze game;
-
-    MazeSettingsScreen(TiltMaze g, FillViewport viewport) {
+    MazeSettingsScreen(TiltMaze g) {
         game = g;
 
         float x = TiltMaze.WIDTH / 2, y = TiltMaze.HEIGHT / 4 * 3;
 
-        settingsStage = new Stage(viewport);
+        settingsStage = new Stage(new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT));
         Gdx.input.setInputProcessor(settingsStage);
 
         board = new Image(Assets.settingsBoard);
@@ -62,12 +63,6 @@ public class MazeSettingsScreen extends ScreenAdapter {
         valuesAdjuster.setWidth(420);
         valuesAdjuster.setPosition(x - valuesAdjuster.getWidth() / 2, y);
 
-        valuesAdjuster.addListener(new ChangeListener() {
-            public void changed(ChangeEvent event, Actor actor) {
-                Gdx.app.log("UITest", "valuesAdjuster: " + valuesAdjuster.getValue());
-            }
-        });
-
         startButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(Assets.start)),
                 new TextureRegionDrawable(new TextureRegion(Assets.startPressed)));
         startButton.setPosition(x - startButton.getWidth() / 2, y / 3);
@@ -87,6 +82,8 @@ public class MazeSettingsScreen extends ScreenAdapter {
         settingsStage.addActor(startButton);
     }
 
+
+    //takes care of settings values that change and prints them out
     @Override
     public void render(float delta) {
         valuesBuilder.append("Maze Generator\n").append("     Options");

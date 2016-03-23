@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
@@ -19,30 +20,16 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 public class TiltGame extends ScreenAdapter {
     TiltMaze game;
 
-    Viewport screen;
-    PerspectiveCamera cam;
-    private CameraInputController camControllers;
-
     private Universe universe;
 
     private Stage stage;
     Label timer, countdown;
     private StringBuilder stringBuilder;
 
-    Slider slider;
-    Label mazeValues;
-
     public TiltGame() {
-        cam = new PerspectiveCamera(50, TiltMaze.WIDTH, TiltMaze.HEIGHT);
-        cam.near = 1f;
-        cam.far = 1000f;
-        cam.update();
-        camControllers = new CameraInputController(cam);
+        stage = new Stage(new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT));
 
-        screen = new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT);
-        stage = new Stage(screen);
-
-        universe = new Universe(cam);
+        universe = new Universe(); //the universe where all 3D world essentials are instantiated
 
         LabelStyle timeStyle = new LabelStyle(Assets.timeFont, Color.WHITE);
         timer = new Label("", timeStyle);
@@ -56,13 +43,14 @@ public class TiltGame extends ScreenAdapter {
         stage.addActor(countdown);
     }
 
+    //the universe is initialized straight away to create the 3D menu background
+    //this method gets called when maze generator options has been set
     public TiltGame showScreen(TiltMaze g, int mazeSizeAdjust) {
         game = g;
-
-        universe.genesis(mazeSizeAdjust);
-
-        Gdx.input.setInputProcessor(new InputAdapter() {
-            @Override
+        universe.genesis(mazeSizeAdjust); // call to universe to request a new maze
+        winningScreen = null;
+        Gdx.input.setInputProcessor(new InputAdapter() { //this class is like a windows into the universe
+            @Override                                   // thus it handles input
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 universe.zoomSwitch();
                 return true;
@@ -72,6 +60,18 @@ public class TiltGame extends ScreenAdapter {
         return this;
     }
 
+    // a method to beautify nasty decimals into a nice format
+    public String timify(float value) {
+        String stringify = "" + value;
+        if (value > 100)
+            return stringify.substring(0, 6) + "'";
+        else if (value > 10)
+            return stringify.substring(0, 5) + "'";
+        return stringify.substring(0, 4) + "'";
+    }
+
+    private WinScreen winningScreen; //required so we only create a single winning screen
+
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0f, 0f, 0f, 0);
@@ -80,32 +80,37 @@ public class TiltGame extends ScreenAdapter {
         universe.update();
 
         if (game != null) {
-            stringBuilder.append(TiltTimer.getNow(false));
-            if (TiltTimer.getNow(false) > 100)
-                stringBuilder.setLength(6);
-            else if (TiltTimer.getNow(false) > 10)
-                stringBuilder.setLength(5);
-            else stringBuilder.setLength(4);
+            if (!universe.gameFinished()) {
+                if (TiltTimer.getNow(false) > 0) {
+                    stringBuilder.append(timify(TiltTimer.getNow(false)));
+                    timer.setText(stringBuilder);
+                }
+                stringBuilder.setLength(0);
 
-            if (TiltTimer.getNow(false) > 0) {
-                stringBuilder.append("'");
+                if (TiltTimer.getNow(false) < 0) {
+                    stringBuilder.append(-TiltTimer.getNow(false));
+                    stringBuilder.setLength(1);
+                    countdown.setText(stringBuilder);
+                } else if (TiltTimer.getNow(false) < 3) {
+                    stringBuilder.append("Go!");
+                    countdown.setPosition(TiltMaze.WIDTH / 2, TiltMaze.HEIGHT / 2, Align.center);
+                    countdown.setText(stringBuilder);
+                } else countdown.setText(stringBuilder);
+                stringBuilder.setLength(0);
+            } else if (winningScreen == null) {
+                stringBuilder.setLength(0);
                 timer.setText(stringBuilder);
+                countdown.setText(stringBuilder);
+                game.setScreen(winningScreen = new WinScreen(game));
             }
-            stringBuilder.setLength(0);
-
-            if (TiltTimer.getNow(false) < 0) {
-                stringBuilder.append(-TiltTimer.getNow(false));
-                stringBuilder.setLength(1);
-                countdown.setText(stringBuilder);
-            } else if (TiltTimer.getNow(false) < 3) {
-                stringBuilder.append("Go!");
-                countdown.setPosition(TiltMaze.WIDTH / 2, TiltMaze.HEIGHT / 2, Align.center);
-                countdown.setText(stringBuilder);
-            } else countdown.setText(stringBuilder);
-            stringBuilder.setLength(0);
         }
+
         stage.act(delta);
         stage.draw();
+    }
+
+    public void reset() {
+        universe.reset();
     }
 
     @Override
@@ -138,27 +143,3 @@ public class TiltGame extends ScreenAdapter {
     public void resize (int width, int height) {
     }
 }
-
-
-//sphericalCamera(200f,  ((accelY / 10) * (MathUtils.PI / 2)), (MathUtils.PI / 2) +  ((accelX / 10) * (MathUtils.PI / 2)) );//-((accelY / 10) * (MathUtils.PI / 2))); //(MathUtils.PI / 2) + ((accelX / 10) * (MathUtils.PI / 2))
-//cam.position.set(upVector(instances.get(0).transform).scl(200f));
-//cam.direction.set(upVector(instances.get(0).transform).scl(-1f));
-//cam.direction.
-// cam.update();
-
-
-//rotation.setEulerAngles(0, ((((accelerometer.axisY() * 10) / 10f) / 10) * 90), ((((accelerometer.axisX() * 10) / 10f) / 10) * 90));
-
-//contactMatrix = new Matrix4(instances.get(1).transform);
-//contactMatrix.setTranslation(contactMatrix.getTranslation(new Vector3(0, 0, 0).sub(upVector(instances.get(0).transform))));
-//instances.get(0).transform.idt().rotate(rotation);
-//nstances.get(0).body.setCenterOfMassTransform(contactMatrix);
-
-//System.out.println(instances.get(0).body.get);
-//instances.get(0).body.setActivationState(Collision.DISABLE_DEACTIVATION);
-
-//    public Vector3 upVector(Matrix4 pos) {
-//        float[] tmp = pos.getValues();
-//        return new Vector3(tmp[Matrix4.M01], tmp[Matrix4.M11], tmp[Matrix4.M21]);
-//    }
-

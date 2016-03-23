@@ -31,11 +31,15 @@ public class Maze {
 
     private Array<Entity> walls;
 
+    private float friction;
+
     public Array<Entity> renderEntities() {
         return walls;
     }
 
     public Maze(float friction, int sizeAdjust) {
+        this.friction = friction;
+
         cellsX = minXcells + sizeAdjust; //20 min
         cellsZ = minZcells + sizeAdjust; //23 min
 
@@ -49,7 +53,8 @@ public class Maze {
         offsetX = -WIDTH / 2;
         offsetZ = -DEPTH / 2;
 
-        finishArea = new Vector3(-offsetX - cellUnitX / 2, 0, -offsetZ - cellUnitZ / 2);
+     //   finishArea = new Vector3(-offsetX - cellUnitX / 2, 0, -offsetZ - cellUnitZ / 2);
+        finishArea = getStartPoint().add(1, 0, 1);
 
         maze = new int[cellsX][cellsZ];
     }
@@ -74,6 +79,7 @@ public class Maze {
     }
 
     private void buildMaze() {
+       // if (walls.size > 0) clearEntities();
         walls.add(buildPlane());
 
         int continuousWallX = 0;
@@ -109,6 +115,22 @@ public class Maze {
             if (continuousWallZ != 0) walls.add(buildWall(i, cellsZ - continuousWallZ, continuousWallZ, false));
             continuousWallZ = 0;
         }
+        walls.add(buildFinishCell());
+    }
+
+    private Entity buildFinishCell() {
+        Entity entity = new Entity((Universe.builder.createBox(cellUnitX, HEIGHT, cellUnitZ, GL20.GL_TRIANGLES,
+                new Material(TextureAttribute.createDiffuse(Assets.finishArea)), Usage.Position | Usage.TextureCoordinates | Usage.Normal)),
+                new btBoxShape(new Vector3(cellUnitX / 2, HEIGHT / 2, cellUnitZ / 2)), 0);
+        entity.body.setCollisionFlags(entity.body.getCollisionFlags() | btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
+        entity.transform.trn(-offsetX - cellUnitX / 2, -HEIGHT + 0.05f, -offsetZ - cellUnitZ / 2);
+        entity.body.proceedToTransform(entity.transform);
+        entity.body.setActivationState(Collision.DISABLE_DEACTIVATION);
+        entity.body.setFriction((float) Math.sqrt(friction));
+        entity.body.setUserValue(77);
+        entity.body.setContactCallbackFlag(Entity.WALL_FLAG);
+        entity.body.setContactCallbackFilter(Entity.OBJECT_FLAG);
+        return entity;
     }
 
     private Entity buildWall(int cellsX, int cellsZ, int length, boolean horizontal) {
@@ -122,7 +144,7 @@ public class Maze {
         entity.transform.trn((horizontal ? wallLength / 2 : 0) + posX + offsetX + THICKNESS, 0, (!horizontal ? wallLength / 2 : 0) + posZ + offsetZ - THICKNESS);
         entity.body.proceedToTransform(entity.transform);
         entity.body.setActivationState(Collision.DISABLE_DEACTIVATION);
-        entity.body.setFriction((float) Math.sqrt(0.4));
+        entity.body.setFriction((float) Math.sqrt(friction));
         entity.body.setUserValue(77);
         entity.body.setContactCallbackFlag(Entity.WALL_FLAG);
         entity.body.setContactCallbackFilter(Entity.OBJECT_FLAG);
@@ -137,7 +159,7 @@ public class Maze {
         entity.transform.trn(0, -HEIGHT, 0);
         entity.body.proceedToTransform(entity.transform);
         entity.body.setActivationState(Collision.DISABLE_DEACTIVATION);
-        entity.body.setFriction((float) Math.sqrt(0.4));
+        entity.body.setFriction((float) Math.sqrt(friction));
         entity.body.setUserValue(88);
         entity.body.setContactCallbackFlag(Entity.GROUND_FLAG);
         entity.body.setContactCallbackFilter(Entity.OBJECT_FLAG);
@@ -159,6 +181,13 @@ public class Maze {
                 generateMaze(cx + directions[dir].dx, cy + directions[dir].dy);
             }
         }
+    }
+
+    public void clearEntities() {
+        for (Entity ent: walls)
+            ent.dispose();
+
+        walls.clear();
     }
 
     private static void swap(DIRECTION[] arr, int i, int j) {

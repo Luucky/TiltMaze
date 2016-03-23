@@ -24,14 +24,15 @@ import static com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence;
  * Created by bobby_000 on 16/03/2016.
  */
 public class MenuScreen extends ScreenAdapter {
+    TiltMaze game; //required reference for screen switching
+
+    FillViewport viewport; //allows for constant resolution, looks same across different screens
+    private Stage stage; //holds GUI elements
+
     ImageButton playButton;
-    FillViewport viewport;
-    private Stage stage;
-
-    TiltMaze game;
-
     Splash splashScreen;
 
+    //splash screen extending actor, can act on a scene, this is the first thing we see running the game
     private class Splash extends Actor {
         Splash() {}
 
@@ -48,7 +49,7 @@ public class MenuScreen extends ScreenAdapter {
         game = g;
         viewport = new FillViewport(TiltMaze.WIDTH, TiltMaze.HEIGHT);
         stage = new Stage(viewport);
-        Gdx.input.setInputProcessor(stage);
+        Gdx.input.setInputProcessor(stage); //stage now responds to input, passes input down to its children (actors)
 
         playButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(Assets.play)),
                                      new TextureRegionDrawable(new TextureRegion(Assets.playPressed)));
@@ -58,7 +59,7 @@ public class MenuScreen extends ScreenAdapter {
             @Override
             public void tap(InputEvent event, float x, float y, int count, int button) { // on tap event
                 if (playButton.getActions().size == 0) // if play button has finished fading in
-                    game.setScreen(new MazeSettingsScreen(game, viewport)); // brings you to the maze options screen
+                    game.setScreen(new MazeSettingsScreen(game)); // brings you to the maze options screen
             }
         });
 
@@ -70,38 +71,18 @@ public class MenuScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-
-
-//            gameScreen = new TiltGame(); // creates an instance of the game screen to achieve the menu with 3d world in the background effect
-
-        //if (gameScreen != null) gameScreen.render(delta); // the 3d world needs to be rendered to be visible, needs a check to avoid nullPointerException
-
         stage.act(delta);
         stage.draw();
     }
 
     @Override
-    public void pause() {
-
-    }
+    public void pause() {}
 
     @Override
-    public void resume() {
-
-    }
+    public void resume() {}
 
     @Override
     public void dispose(){
         stage.dispose();
     }
 }
-
-      /*  Table table = new Table();
-        table.setFillParent(true);
-        table.setDebug(true);*/
-//playButton = new TextButton("", skin.get("playButtonUp", TextButton.TextButtonStyle.class));
-//playButton.setTransform(true);
-//playButton.setFillParent(true);
-//playButton.setRotation(90);
-//playButton.setOrigin();
-//table.add(playButton).setActorX(Gdx.graphics.getWidth() / 2);

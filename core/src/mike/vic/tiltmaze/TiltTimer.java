@@ -16,7 +16,9 @@ public class TiltTimer {
         return time;
     }
 
-    static public boolean getState() {
+    static public boolean isNull() { return timer == null; }
+
+    static public boolean getStopped() {
         return stopped;
     }
 
